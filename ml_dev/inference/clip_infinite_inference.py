@@ -17,7 +17,7 @@ class InfiniteCLIPInference:
         self.inference_count = 0
         self.total_processing_time = 0
         
-        # Register signal handlers for graceful shutdown
+        #register signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
         
@@ -37,7 +37,7 @@ class InfiniteCLIPInference:
         self.text_prompts = [f"a photo of a {label}" for label in labels]
         self.text_tokens = clip.tokenize(self.text_prompts).to(self.device)
         
-        # Precompute text embeddings once
+        #precompute text embeddings once
         with torch.no_grad():
             self.text_features = self.model.encode_text(self.text_tokens)
             self.text_features = self.text_features / self.text_features.norm(dim=-1, keepdim=True)
@@ -45,11 +45,8 @@ class InfiniteCLIPInference:
         print(f"Setup {len(self.text_prompts)} text prompts")
         
     def get_next_image(self):
-        """Get the next image for processing - override this for your use case"""
-        # This is where you'd get your real image source
-        # Examples: camera feed, video stream, image directory, etc.
         
-        # For demo purposes, we'll create synthetic images
+        #for demo purposes, we'll create synthetic images
         img_array = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
         return Image.fromarray(img_array), f"synthetic_image_{self.inference_count}"
     
@@ -58,20 +55,20 @@ class InfiniteCLIPInference:
         start_time = time.time()
         
         try:
-            # Preprocess image
+         
             processed_image = self.preprocess(image).unsqueeze(0).to(self.device)
             
-            # Run inference
+            #run inference
             with torch.no_grad():
-                # Encode image
+                #encode image
                 image_features = self.model.encode_image(processed_image)
                 image_features = image_features / image_features.norm(dim=-1, keepdim=True)
                 
-                # Calculate similarity
+                #calculate similarity
                 similarity = (100.0 * image_features @ self.text_features.T)
                 probs = similarity.softmax(dim=-1)
                 
-            # Get results
+            #get results
             probs = probs.cpu().numpy()[0]
             best_idx = np.argmax(probs)
             best_label = self.text_prompts[best_idx]
@@ -100,7 +97,7 @@ class InfiniteCLIPInference:
         self.total_processing_time += results['processing_time']
         avg_time = self.total_processing_time / self.inference_count
         
-        # Display results
+        #display results
         if self.inference_count % 10 == 0:
             print(f"\n--- Inference #{self.inference_count} ---")
             print(f"Image: {results['image_id']}")
@@ -109,7 +106,7 @@ class InfiniteCLIPInference:
             print(f"Average time: {avg_time*1000:.1f}ms")
             print(f"Throughput: {1/avg_time:.1f} FPS")
         else:
-            # Brief output for most frames
+            
             print(f"#{self.inference_count}: {results['best_label']} ({results['confidence']:.2f}) - {results['processing_time']*1000:.1f}ms", end='\r')
     
     def run_infinite_inference(self, target_fps=30):
@@ -118,11 +115,10 @@ class InfiniteCLIPInference:
         print("STARTING INFINITE CLIP INFERENCE")
         print("="*60)
         print("Press Ctrl+C to stop")
-        
-        # Setup text prompts
+
         self.setup_text_prompts()
         
-        # Performance tracking
+        #perf track
         frame_times = []
         start_time = time.time()
         
@@ -130,27 +126,27 @@ class InfiniteCLIPInference:
             while self.running:
                 iteration_start = time.time()
                 
-                # Get next image
+                #get next image
                 image, image_id = self.get_next_image()
                 
-                # Process image
+                #pocess image
                 results = self.process_single_image(image, image_id)
                 
-                # Handle results
+                #handle results
                 self.process_results(results)
                 
-                # Frame rate control
+                #frame rate control
                 processing_time = time.time() - iteration_start
                 frame_times.append(processing_time)
                 
-                # Maintain target FPS
+                #maintain target fps
                 if target_fps > 0:
                     target_frame_time = 1.0 / target_fps
                     sleep_time = target_frame_time - processing_time
                     if sleep_time > 0:
                         time.sleep(sleep_time)
                 
-                # Keep only recent frame times for stats
+                #keep only recent frame times for stats
                 if len(frame_times) > 100:
                     frame_times.pop(0)
                     
@@ -178,46 +174,20 @@ class InfiniteCLIPInference:
         
         print("CLIP inference stopped gracefully")
 
-# Example usage with different image sources
-class CameraInference(InfiniteCLIPInference):
-    def __init__(self, camera_index=0, **kwargs):
-        super().__init__(**kwargs)
-        self.camera_index = camera_index
-        # You would initialize your camera here
-        # self.camera = cv2.VideoCapture(camera_index)
-        
-    def get_next_image(self):
-        """Get image from camera"""
-        # Example with OpenCV (uncomment if you have camera)
-        # ret, frame = self.camera.read()
-        # if ret:
-        #     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        #     return Image.fromarray(frame_rgb), f"camera_frame_{self.inference_count}"
-        # else:
-        #     return self.get_fallback_image()
-        
-        # Fallback to synthetic images
-        return super().get_next_image()
 
-class DirectoryInference(InfiniteCLIPInference):
-    def __init__(self, image_directory, **kwargs):
-        super().__init__(**kwargs)
-        self.image_directory = Path(image_directory)
-        self.image_files = list(self.image_directory.glob("*.jpg")) + list(self.image_directory.glob("*.png"))
-        self.current_index = 0
-        print(f"Found {len(self.image_files)} images in directory")
-        
-    def get_next_image(self):
-        """Get next image from directory (cycles through images)"""
-        if not self.image_files:
-            return self.get_fallback_image()
-            
-        image_file = self.image_files[self.current_index]
-        self.current_index = (self.current_index + 1) % len(self.image_files)
-        
-        try:
-            image = Image.open(image_file)
-            return image, image_file.name
-        except Exception as e:
-            print(f"Error loading {image_file}: {e}")
-            return self.get_next_image()
+def main():
+    
+    #inference type
+    inference_type = "synthetic"
+    
+    if inference_type == "synthetic":
+
+        #basic infinite inference with synthetic images
+        inference = InfiniteCLIPInference(model_name="ViT-B/32", device="cuda")
+    
+    target_fps = 30
+    inference.start_time = time.time()
+    inference.run_infinite_inference(target_fps=target_fps)
+
+if __name__ == "__main__":
+    main()

@@ -15,6 +15,7 @@ class CLIPInferenceBenchmark:
         print(f"Loaded {model_name} on {device}")
         
     def load_huggingface_dataset(self, dataset_name, split="test", num_samples=1000):
+
         """Load a dataset from HuggingFace"""
         print(f"Loading {dataset_name} dataset...")
         
@@ -30,10 +31,10 @@ class CLIPInferenceBenchmark:
                 dataset = load_dataset("cats_vs_dogs", split=split)
                 
             else:
-                # Try to load generic image dataset
+                # try to load generic image dataset
                 dataset = load_dataset(dataset_name, split=split)
                 
-            # Limit dataset size
+            #limit dataset size
             if num_samples and len(dataset) > num_samples:
                 dataset = dataset.select(range(num_samples))
                 
@@ -45,7 +46,7 @@ class CLIPInferenceBenchmark:
             return None
 
     def preprocess_dataset(self, dataset):
-        """Preprocess dataset for CLIP - FIXED VERSION"""
+        """Preprocess dataset for CLIP"""
         processed_data = []
         
         for i, example in enumerate(dataset):
@@ -219,38 +220,21 @@ class CLIPInferenceBenchmark:
         }
         
         return results
-
-    # def test_with_synthetic_data(self, num_images=100):
-    #     """Create synthetic test data if real dataset fails"""
-    #     print("Creating synthetic test data...")
-        
-    #     processed_data = []
-    #     for i in range(num_images):
-    #         # Create random RGB image
-    #         img_array = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
-    #         image = Image.fromarray(img_array)
-            
-    #         processed_image = self.preprocess(image)
-    #         processed_data.append({
-    #             "image": processed_image,
-    #             "label": i % 10,  # Fake labels
-    #             "original_image": image
-    #         })
-        
-    #     text_prompts = ["a synthetic test image", "a random pattern", "a computer generated image"]
-        
-    #     print(f"Created {len(processed_data)} synthetic images")
-    #     return self.benchmark_single_image(processed_data, text_prompts)
+ 
 
 def main():
     parser = argparse.ArgumentParser(description='CLIP Inference Benchmark')
+
     parser.add_argument('--model', type=str, default='ViT-B/32', 
                        choices=['ViT-B/32', 'ViT-B/16', 'RN50'],
                        help='CLIP model to benchmark')
+    
     parser.add_argument('--dataset', type=str, default='cifar10',
                        help='HuggingFace dataset name')
+    
     parser.add_argument('--num_samples', type=int, default=500,
                        help='Number of samples to use for benchmarking')
+    
     parser.add_argument('--device', type=str, default='cuda',
                        choices=['cuda', 'cpu'],
                        help='Device to run inference on')
