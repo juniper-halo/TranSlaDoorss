@@ -1,14 +1,20 @@
-from hashlib import sha256
 import os
 import sys
+from hashlib import sha256
 from io import BytesIO
 
-from rest_framework.test import APIClient
 from PIL import Image
+from rest_framework.test import APIClient
 
 # Add the root directory to path to import from development
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-from ml_dev.development.preprocessing import ASLPreprocessor  # pylint: disable=wrong-import-position
+sys.path.append(
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+)
+from ml_dev.development.preprocessing import \
+    ASLPreprocessor  # pylint: disable=wrong-import-position
+
 test_path = os.path.dirname(__file__) + "/test_cases/"
 
 
@@ -31,7 +37,9 @@ def test_translate_valid_image_png():
     upload_file = BytesIO(raw_bytes)
     upload_file.name = "png_test.PNG"
     response = client.post(
-        "/img_in/translate/", {"image": upload_file, "language": "ASL"}, format="multipart"
+        "/img_in/translate/",
+        {"image": upload_file, "language": "ASL"},
+        format="multipart",
     )
     try:
         assert response.status_code == 200
@@ -61,7 +69,9 @@ def test_translate_valid_image_jpg():
     upload_file = BytesIO(raw_bytes)
     upload_file.name = "jpg_test.jpg"
     response = client.post(
-        "/img_in/translate/", {"image": upload_file, "language": "ASL"}, format="multipart"
+        "/img_in/translate/",
+        {"image": upload_file, "language": "ASL"},
+        format="multipart",
     )
     assert response.status_code == 200
     assert "translation" in response.data

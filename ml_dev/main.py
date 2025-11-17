@@ -12,7 +12,8 @@ from PIL import Image
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # import our ASL predictor
-from inference.clip_asl_inference import ASLPredictor  # pylint: disable=wrong-import-position
+from inference.clip_asl_inference import \
+    ASLPredictor  # pylint: disable=wrong-import-position
 
 
 def main():

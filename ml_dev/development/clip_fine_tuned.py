@@ -1,6 +1,7 @@
 """
 CLIP fine-tuning structure for ASL letter recognition.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,15 +16,16 @@ from typing import Any, Dict, Iterable, Optional, Tuple
 import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset, random_split
-from transformers import CLIPModel, CLIPProcessor, get_linear_schedule_with_warmup
+from transformers import (CLIPModel, CLIPProcessor,
+                          get_linear_schedule_with_warmup)
 
 # ensure project root is on sys.path when executed as a script
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from ml_dev.development.preprocessing import ASLPreprocessor # pylint: disable=wrong-import-position
-
+from ml_dev.development.preprocessing import \
+    ASLPreprocessor  # pylint: disable=wrong-import-position
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +87,8 @@ class ASLFineTuner:
         training_cfg: TrainingConfig,
     ) -> None:
         # lazy import avoids CLI penalty
-        from datasets import load_dataset  # pylint: disable=import-outside-toplevel
+        from datasets import \
+            load_dataset  # pylint: disable=import-outside-toplevel
 
         self.dataset_cfg = dataset_cfg
         self.training_cfg = training_cfg
@@ -115,9 +118,16 @@ class ASLFineTuner:
 
     def _create_optimizer(self) -> AdamW:
         params = [
-            {"params": self.model.vision_model.parameters(), "lr": self.training_cfg.learning_rate},
+            {
+                "params": self.model.vision_model.parameters(),
+                "lr": self.training_cfg.learning_rate,
+            },
         ]
-        return AdamW(params, lr=self.training_cfg.learning_rate, weight_decay=self.training_cfg.weight_decay)
+        return AdamW(
+            params,
+            lr=self.training_cfg.learning_rate,
+            weight_decay=self.training_cfg.weight_decay,
+        )
 
     def _create_scheduler(self):
         total_steps = (
@@ -143,7 +153,11 @@ class ASLFineTuner:
 
     def train(self) -> None:
         train_loader = self._create_dataloader(self.train_dataset, shuffle=True)
-        val_loader = self._create_dataloader(self.val_dataset, shuffle=False) if len(self.val_dataset) > 0 else None
+        val_loader = (
+            self._create_dataloader(self.val_dataset, shuffle=False)
+            if len(self.val_dataset) > 0
+            else None
+        )
         global_step = 0
 
         self.model.train()
@@ -165,7 +179,12 @@ class ASLFineTuner:
                     global_step += 1
 
                     if global_step % self.training_cfg.log_every_n_steps == 0:
-                        log.info("Epoch %s step %s placeholder loss %.4f", epoch, global_step, loss.item())
+                        log.info(
+                            "Epoch %s step %s placeholder loss %.4f",
+                            epoch,
+                            global_step,
+                            loss.item(),
+                        )
 
             if val_loader:
                 self.evaluate(val_loader, epoch)
@@ -205,12 +224,20 @@ class ASLFineTuner:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fine-tune CLIP for ASL recognition.")
-    parser.add_argument("--config", type=str, help="Optional JSON config file with dataset/training settings.")
-    parser.add_argument("--output-dir", type=str, help="Override output directory for checkpoints.")
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Optional JSON config file with dataset/training settings.",
+    )
+    parser.add_argument(
+        "--output-dir", type=str, help="Override output directory for checkpoints."
+    )
     return parser.parse_args()
 
 
-def load_configs(config_path: Optional[str], output_override: Optional[str]) -> Tuple[DatasetConfig, TrainingConfig]:
+def load_configs(
+    config_path: Optional[str], output_override: Optional[str]
+) -> Tuple[DatasetConfig, TrainingConfig]:
     dataset_cfg = DatasetConfig()
     training_cfg = TrainingConfig()
 

@@ -3,7 +3,7 @@ Comprehensive evaluation framework for ASL models
 """
 
 from collections import defaultdict
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np

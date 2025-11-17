@@ -1,18 +1,21 @@
-from hashlib import sha256
 import os
 import sys
+from hashlib import sha256
 from io import BytesIO
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.request import Request
-from rest_framework import status
 from PIL import Image
-
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 # Add the root directory to path to import from development
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from ml_dev.development.preprocessing import ASLPreprocessor  # pylint: disable=wrong-import-position
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+from ml_dev.development.preprocessing import \
+    ASLPreprocessor  # pylint: disable=wrong-import-position
+
 
 # Create your views here.
 class TranslatorView(APIView):

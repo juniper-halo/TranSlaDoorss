@@ -7,6 +7,7 @@ import torch
 from datasets import load_dataset
 from PIL import Image
 
+
 class CLIPInferenceBenchmark:
     def __init__(self, model_name="ViT-B/32", device="cuda"):
         self.device = device
