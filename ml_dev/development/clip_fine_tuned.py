@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple
 
 import torch
-from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset, random_split
 from transformers import CLIPModel, CLIPProcessor, get_linear_schedule_with_warmup
@@ -23,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from ml_dev.development.preprocessing import ASLPreprocessor
+from ml_dev.development.preprocessing import ASLPreprocessor # pylint: disable=wrong-import-position
 
 
 log = logging.getLogger(__name__)
@@ -85,7 +84,8 @@ class ASLFineTuner:
         dataset_cfg: DatasetConfig,
         training_cfg: TrainingConfig,
     ) -> None:
-        from datasets import load_dataset  # lazy import avoids CLI penalty
+        # lazy import avoids CLI penalty
+        from datasets import load_dataset  # pylint: disable=import-outside-toplevel
 
         self.dataset_cfg = dataset_cfg
         self.training_cfg = training_cfg
@@ -173,6 +173,8 @@ class ASLFineTuner:
             self.save_checkpoint(epoch)
 
     def evaluate(self, dataloader: DataLoader, epoch: int) -> None:
+        if dataloader is None:
+            return
         self.model.eval()
         # TODO: add model evaluation logic (accuracy, confusion matrix, etc.)
         log.info("Ran evaluation epoch %s (placeholder)", epoch)

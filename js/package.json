@@ -1,0 +1,33 @@
+{
+  "name": "transladoors-frontend",
+  "version": "1.0.0",
+  "description": "Frontend JavaScript for Transladoors project",
+  "scripts": {
+    "test": "jest --coverage --passWithNoTests",
+    "test:watch": "jest --watch",
+    "lint": "eslint *.js --env browser,node,es2021 --parser-options ecmaVersion:2021",
+    "format": "prettier --write *.js",
+    "format:check": "prettier --check *.js"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "prettier": "^3.0.3"
+  },
+  "jest": {
+    "collectCoverage": true,
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "html",
+      "text",
+      "lcov"
+    ],
+    "collectCoverageFrom": [
+      "*.js",
+      "!*.test.js",
+      "!tests/**"
+    ],
+    "testEnvironment": "jsdom"
+  }
+}

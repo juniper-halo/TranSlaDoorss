@@ -1,0 +1,112 @@
+name: Combined Code Quality and Testing (Main Branch)
+
+# Runs on code with a pull request to main, or pushed to main (maybe redundant but w/e)
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+  # Allows the workflow to be run manually if wanted
+  workflow_dispatch:
+
+jobs:
+  # ML Development Job (Python 3.10)
+  combined-python-quality-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Miniconda and create environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          environment-file: env/environment_unified.yaml
+          activate-environment: clip-env-windows
+          auto-activate-base: false
+
+      - name: Install additional dependencies
+        run: |
+          conda install pylint black isort -c conda-forge -y
+
+      - name: Setup Environment Variables
+        run: |
+          echo "DEBUG=True" >> .env
+          echo "SECRET_KEY=fake-secret-key-for-ci" >> .env
+          echo "ALLOWED_HOSTS=127.0.0.1,localhost" >> .env
+
+      - name: Run Django tests
+        working-directory: django_server
+        run: |
+          python manage.py test
+
+      - name: Run pytest with coverage
+        working-directory: django_server
+        run: |
+          pytest --cov=. --cov-report=xml --cov-report=html --cov-report=term-missing
+
+      - name: Upload coverage XML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml-django
+          path: django_server/coverage.xml
+
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-django
+          path: django_server/htmlcov/
+
+      - name: Lint with Pylint
+        run: |
+          pylint --rcfile=./.pylintrc $(find . -name "*.py" | grep -v -E "(__pycache__|venv|\.venv|env|\.env|conda_env|myenv|site-packages)")
+
+  # JavaScript Quality Check
+  javascript-quality-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: js
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'js/package-lock.json'
+
+      - name: Install JavaScript dependencies
+        run: npm install
+
+      - name: Lint JavaScript with ESLint
+        run: npm run lint --init
+
+      - name: Run JavaScript tests with coverage
+        run: npm test
+
+      - name: Upload JavaScript coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov-javascript
+          path: coverage/lcov.info
+
+      - name: Upload JavaScript coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-javascript
+          path: coverage/
+
+      - name: Deploy JavaScript Coverage to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: coverage/
+          destination_dir: coverage/javascript

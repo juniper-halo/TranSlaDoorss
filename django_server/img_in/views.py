@@ -1,13 +1,18 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.http import HttpRequest
+from hashlib import sha256
+import os
+import sys
+from io import BytesIO
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
 from PIL import Image
-from hashlib import sha256
 
+
+# Add the root directory to path to import from development
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from ml_dev.development.preprocessing import ASLPreprocessor  # pylint: disable=wrong-import-position
 
 # Create your views here.
 class TranslatorView(APIView):
@@ -18,17 +23,30 @@ class TranslatorView(APIView):
                 {"error": "No submitted image found."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        elif self.verify_image(image):
-            pil_image = Image.open(image)
+
+        if self.verify_image(image):
+            # pil_image = Image.open(image)
+            pass
+
         else:
             return Response(
                 {"error": "Invalid/corrupted image."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Preprocess the image using ASLPreprocessor
+        preprocessor = ASLPreprocessor()
+        pil_image = Image.open(image)
+        preprocessed_image = preprocessor.preprocess(pil_image)
+
+        # Convert preprocessed image to bytes for hashing
+        buf = BytesIO()
+        preprocessed_image.save(buf, format="PNG")
+        data = buf.getvalue()
+
+        # Hash the preprocessed image to verify that it worked
         hash_thingy = sha256()
-        for chunk in image.chunks():
-            hash_thingy.update(chunk)
+        hash_thingy.update(data)
         final_hash = hash_thingy.hexdigest()
 
         return Response({"translation": final_hash})
@@ -39,5 +57,5 @@ class TranslatorView(APIView):
             i.verify()
             image.seek(0)
             return True
-        except Exception:
+        except (OSError, ValueError):
             return False
