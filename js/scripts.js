@@ -7,6 +7,46 @@
 // Scripts
 //
 
+// Webcam stream reference
+let webcamStream = null;
+
+// Toggle the webcam on/off
+async function toggleCamera() {
+  const video = document.getElementById("webcam");
+  const btn = document.getElementById("startCameraBtn");
+
+  if (webcamStream) {
+    // Stop the camera
+    webcamStream.getTracks().forEach(track => track.stop());
+    webcamStream = null;
+    video.srcObject = null;
+    btn.textContent = "Start Camera";
+    console.log("Camera stopped!");
+  } else {
+    // Start the camera
+    try {
+      webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = webcamStream;
+      btn.textContent = "Stop Camera";
+      console.log("Camera started!");
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Could not access camera. Please allow camera permissions.");
+    }
+  }
+}
+
+// Placeholder function for translation requests
+function requestTranslation() {
+  console.log("Translation requested!");
+  // TODO: Capture frame from video and send to backend for translation
+  if (!webcamStream) {
+    alert("Please start the camera first!");
+    return;
+  }
+  alert("Translation feature coming soon!");
+}
+
 window.addEventListener("DOMContentLoaded", (event) => {
   // Navbar shrink function
   var navbarShrink = function () {
