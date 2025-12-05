@@ -123,3 +123,8 @@ window.addEventListener("DOMContentLoaded", (event) => {
     });
   });
 });
+
+// Export functions for testing (ignored by browsers)
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { toggleCamera, requestTranslation, captureFrame };
+}
