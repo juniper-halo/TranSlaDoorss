@@ -17,7 +17,7 @@ async function toggleCamera() {
 
   if (webcamStream) {
     // Stop the camera
-    webcamStream.getTracks().forEach(track => track.stop());
+    webcamStream.getTracks().forEach((track) => track.stop());
     webcamStream = null;
     video.srcObject = null;
     btn.textContent = "Start Camera";
