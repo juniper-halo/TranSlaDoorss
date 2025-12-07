@@ -17,8 +17,18 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import TemplateView
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
+    path("", TemplateView.as_view(template_name="index.html"), name="home"),
     path("img_in/", include("img_in.urls")),
     path("admin/", admin.site.urls),
 ]
+
+# Serve static files (js, css, assets) during development
+if settings.DEBUG:
+    urlpatterns += static("/js/", document_root=settings.FRONTEND_DIR / "js")
+    urlpatterns += static("/css/", document_root=settings.FRONTEND_DIR / "css")
+    urlpatterns += static("/assets/", document_root=settings.FRONTEND_DIR / "assets")
