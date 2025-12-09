@@ -106,8 +106,10 @@ class ASLFineTuner:
             for letter in self.letters
         ]
 
-        # tokenize and compute text features 
-        tokenized = self.processor(text=self.text_prompts, return_tensors="pt", padding=True)
+        # tokenize and compute text features
+        tokenized = self.processor(
+            text=self.text_prompts, return_tensors="pt", padding=True
+        )
         tokenized = {k: v.to(training_cfg.device) for k, v in tokenized.items()}
         with torch.no_grad():
             text_feats = self.model.get_text_features(**tokenized)
@@ -228,7 +230,9 @@ class ASLFineTuner:
                         )
 
                         avg_loss = epoch_loss / max(1, epoch_steps)
-                        log.info("Epoch %s step %s loss %.4f", epoch, global_step, avg_loss)
+                        log.info(
+                            "Epoch %s step %s loss %.4f", epoch, global_step, avg_loss
+                        )
 
             avg_epoch_loss = epoch_loss / max(1, epoch_steps)
             log.info("Finished epoch %s - avg loss: %.4f", epoch, avg_epoch_loss)
