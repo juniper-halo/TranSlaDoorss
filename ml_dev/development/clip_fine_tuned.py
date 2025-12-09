@@ -99,6 +99,25 @@ class ASLFineTuner:
 
         self.preprocessor = ASLPreprocessor()
 
+        # Prepare textual prompts and precompute text features (kept fixed here?)
+        self.letters = [chr(65 + i) for i in range(26)]
+        self.text_prompts = [
+            f"a photo of a hand showing the sign language letter {letter}"
+            for letter in self.letters
+        ]
+
+        # tokenize and compute text features 
+        tokenized = self.processor(text=self.text_prompts, return_tensors="pt", padding=True)
+        tokenized = {k: v.to(training_cfg.device) for k, v in tokenized.items()}
+        with torch.no_grad():
+            text_feats = self.model.get_text_features(**tokenized)
+            text_feats = text_feats / text_feats.norm(dim=-1, keepdim=True)
+        self.register_buffer = None  # placeholder
+        self.text_features = text_feats
+
+        # loss
+        self.criterion = nn.CrossEntropyLoss()
+
         hf_dataset = load_dataset(dataset_cfg.name)
         train_split = hf_dataset[dataset_cfg.train_split]
 
@@ -163,14 +182,36 @@ class ASLFineTuner:
         self.model.train()
 
         for epoch in range(self.training_cfg.epochs):
-            for step, batch in enumerate(train_loader):
-                batch = {k: v.to(self.training_cfg.device) for k, v in batch.items()}
-                outputs = self.model(**batch)
-                loss = outputs.logits_per_image.softmax(dim=1)  # placeholder
+            epoch_loss = 0.0
+            epoch_steps = 0
 
-                # TODO: replace with cross-entropy against labels
-                loss = torch.tensor(0.0, device=self.training_cfg.device)
+            for step, batch in enumerate(train_loader):
+                # batch = {k: v.to(self.training_cfg.device) for k, v in batch.items()}
+                # outputs = self.model(**batch)
+                # loss = outputs.logits_per_image.softmax(dim=1)  # placeholder
+
+                # # TODO: replace with cross-entropy against labels
+                # loss = torch.tensor(0.0, device=self.training_cfg.device)
+
+                # dataset returns 'pixel_values' and 'labels'
+                pixel_values = batch["pixel_values"].to(self.training_cfg.device)
+                labels = batch["labels"].to(self.training_cfg.device)
+
+                # get image features
+                image_feats = self.model.get_image_features(pixel_values=pixel_values)
+                image_feats = image_feats / image_feats.norm(dim=-1, keepdim=True)
+                text_feats = self.text_features.to(self.training_cfg.device)
+
+                # compute logits: scaled cosine similarity
+                logit_scale = self.model.logit_scale.exp()
+                logits_per_image = logit_scale * image_feats @ text_feats.t()
+
+                # cross-entropy: ground-truth label indices
+                loss = self.criterion(logits_per_image, labels)
                 loss.backward()
+
+                epoch_loss += loss.item()
+                epoch_steps += 1
 
                 if (step + 1) % self.training_cfg.gradient_accumulation_steps == 0:
                     self.optimizer.step()
@@ -185,6 +226,12 @@ class ASLFineTuner:
                             global_step,
                             loss.item(),
                         )
+
+                        avg_loss = epoch_loss / max(1, epoch_steps)
+                        log.info("Epoch %s step %s loss %.4f", epoch, global_step, avg_loss)
+
+            avg_epoch_loss = epoch_loss / max(1, epoch_steps)
+            log.info("Finished epoch %s - avg loss: %.4f", epoch, avg_epoch_loss)
 
             if val_loader:
                 self.evaluate(val_loader, epoch)
