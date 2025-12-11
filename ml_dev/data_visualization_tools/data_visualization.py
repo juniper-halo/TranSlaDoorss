@@ -1,8 +1,9 @@
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+from datasets import load_dataset
 
-def visualize_dataset(dataset, class_names_search=None, split='train', num_images=10):
+
+def visualize_dataset(dataset, class_names_search=None, split="train", num_images=10):
     """
     Custom visualization for specific dataset structure
     Pipeline:
@@ -16,7 +17,7 @@ def visualize_dataset(dataset, class_names_search=None, split='train', num_image
     label_col = 'label'
     
     # get class names
-    class_names = dataset[split].features['label'].names
+    class_names = dataset[split].features["label"].names
     print(f"Available classes: {class_names}")
     print(f"Total classes: {len(class_names)}")
 
@@ -24,9 +25,11 @@ def visualize_dataset(dataset, class_names_search=None, split='train', num_image
     if class_names_search is not None:
         # find the class index
         if class_names_search not in class_names:
-            print(f"Class '{class_names_search}' not found. Available classes: {class_names}")
+            print(
+                f"Class '{class_names_search}' not found. Available classes: {class_names}"
+            )
             return
-        
+
         class_idx = class_names.index(class_names_search)
         
         # find all images of this class
@@ -34,7 +37,7 @@ def visualize_dataset(dataset, class_names_search=None, split='train', num_image
         for i in range(len(dataset[split])):
             if dataset[split][i][label_col] == class_idx:
                 class_image_indices.append(i)
-        
+
         if not class_image_indices:
             print(f"No images found for class '{class_names_search}'")
             return
@@ -66,8 +69,8 @@ def visualize_dataset(dataset, class_names_search=None, split='train', num_image
         
         # hide unused subplots
         for j in range(i + 1, len(axes)):
-            axes[j].axis('off')
-        
+            axes[j].axis("off")
+
         plt.tight_layout()
         plt.show()
         return
@@ -91,7 +94,7 @@ def visualize_dataset(dataset, class_names_search=None, split='train', num_image
         if i >= len(dataset[split]):
             print("Tried to access an invalid image.")
             break
-            
+
         sample = dataset[split][i]  # this fetches the raw data
         
         # pass that directly to matplotlib
@@ -107,8 +110,8 @@ def visualize_dataset(dataset, class_names_search=None, split='train', num_image
     
     # hide unused subplots also boxes
     for j in range(i + 1, len(axes)):
-        axes[j].axis('off')
-    
+        axes[j].axis("off")
+
     plt.tight_layout()
     plt.show()
 

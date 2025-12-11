@@ -4,6 +4,7 @@ clip fine tuning structure for asl letter recognition
 trains a clip vision tower on the asl dataset and saves checkpoints plus metrics files
 that can be selected later with export_best_checkpoint.py and loaded via the inference service
 """
+
 from __future__ import annotations
 
 import argparse
@@ -17,7 +18,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple
 
 import torch
-from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset, random_split
 from torch.utils.tensorboard import SummaryWriter
@@ -30,8 +30,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from ml_dev.development.preprocessing import ASLPreprocessor
-
+from ml_dev.development.preprocessing import \
+    ASLPreprocessor  # pylint: disable=wrong-import-position
 
 log = logging.getLogger(__name__)
 
@@ -136,9 +136,16 @@ class ASLFineTuner:
 
     def _create_optimizer(self) -> AdamW:
         params = [
-            {"params": self.model.vision_model.parameters(), "lr": self.training_cfg.learning_rate},
+            {
+                "params": self.model.vision_model.parameters(),
+                "lr": self.training_cfg.learning_rate,
+            },
         ]
-        return AdamW(params, lr=self.training_cfg.learning_rate, weight_decay=self.training_cfg.weight_decay)
+        return AdamW(
+            params,
+            lr=self.training_cfg.learning_rate,
+            weight_decay=self.training_cfg.weight_decay,
+        )
 
     def _create_scheduler(self):
         steps_per_epoch = math.ceil(len(self.train_dataset) / self.training_cfg.batch_size)
@@ -161,7 +168,11 @@ class ASLFineTuner:
 
     def train(self) -> None:
         train_loader = self._create_dataloader(self.train_dataset, shuffle=True)
-        val_loader = self._create_dataloader(self.val_dataset, shuffle=False) if len(self.val_dataset) > 0 else None
+        val_loader = (
+            self._create_dataloader(self.val_dataset, shuffle=False)
+            if len(self.val_dataset) > 0
+            else None
+        )
         global_step = 0
 
         self.model.train()
@@ -283,12 +294,20 @@ class ASLFineTuner:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fine-tune CLIP for ASL recognition.")
-    parser.add_argument("--config", type=str, help="Optional JSON config file with dataset/training settings.")
-    parser.add_argument("--output-dir", type=str, help="Override output directory for checkpoints.")
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Optional JSON config file with dataset/training settings.",
+    )
+    parser.add_argument(
+        "--output-dir", type=str, help="Override output directory for checkpoints."
+    )
     return parser.parse_args()
 
 
-def load_configs(config_path: Optional[str], output_override: Optional[str]) -> Tuple[DatasetConfig, TrainingConfig]:
+def load_configs(
+    config_path: Optional[str], output_override: Optional[str]
+) -> Tuple[DatasetConfig, TrainingConfig]:
     dataset_cfg = DatasetConfig()
     training_cfg = TrainingConfig()
 

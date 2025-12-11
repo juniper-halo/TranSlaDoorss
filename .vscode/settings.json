@@ -1,27 +1,17 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda",
-    "python-envs.pythonProjects": []
-} // {
-//     "python-envs.defaultEnvManager": "ms-python.python:conda",
-//     "python-envs.defaultPackageManager": "ms-python.python:conda",
-//     "python-envs.pythonProjects": []
-// }
-
-// {
-//   "files.exclude": {
-//     "**/ml_dev/saved_weights/**": true,
-//     "**/ml_dev/archive_weights/**": true,
-//   },
-//   "files.watcherExclude": {
-//     "**/ml_dev/saved_weights/**": true,
-//     "**/ml_dev/archive_weights/**": true,
-//   },
-//   "search.exclude": {
-//     "**/ml_dev/saved_weights/**": true,
-//     "**/ml_dev/archive_weights/**": true,
-// },
-// "python-envs.defaultEnvManager": "ms-python.python:conda",
-// "python-envs.defaultPackageManager": "ms-python.python:conda",
-// "python-envs.pythonProjects": []
-// }
+    "python.formatting.provider": "black",
+    "python.sortImports.args": [
+        "--profile",
+        "black"
+    ],
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always"
+    },
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+        }
+    }
+}

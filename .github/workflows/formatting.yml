@@ -1,0 +1,58 @@
+name: Format Code
+
+on:
+
+  push:
+    branches: [ "main" ]
+
+  workflow_dispatch:
+
+jobs:
+
+  # Formatting job (runs independently)
+  auto-format:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python 3.10 for ML code
+        uses: actions/setup-python@v5
+        with: 
+          python-version: "3.10"
+
+      - name: Install formatting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install black isort
+
+      - name: Format Python code
+        run: |
+          black .
+          isort .
+
+      - name: Setup Node.js for JavaScript formatting
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'js/package-lock.json'
+
+      - name: Install JavaScript dependencies
+        working-directory: js
+        run: npm install
+          
+      - name: Format JavaScript code
+        working-directory: js
+        run: npm run format
+
+      - name: Commit changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff-index --quiet HEAD || git commit -m "Auto-format Python and JavaScript code with Black, isort, and Prettier"
+          git push

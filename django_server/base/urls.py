@@ -15,10 +15,20 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+from django.views.generic import TemplateView
 
 urlpatterns = [
+    path("", TemplateView.as_view(template_name="index.html"), name="home"),
     path("img_in/", include("img_in.urls")),
     path("admin/", admin.site.urls),
 ]
+
+# Serve static files (js, css, assets) during development
+if settings.DEBUG:
+    urlpatterns += static("/js/", document_root=settings.FRONTEND_DIR / "js")
+    urlpatterns += static("/css/", document_root=settings.FRONTEND_DIR / "css")
+    urlpatterns += static("/assets/", document_root=settings.FRONTEND_DIR / "assets")

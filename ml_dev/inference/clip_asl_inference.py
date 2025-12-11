@@ -17,6 +17,7 @@ import torch
 from datasets import load_dataset
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
+from transformers import CLIPModel, CLIPProcessor
 
 # add the parent directory to path to import from development
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -57,7 +58,9 @@ class ASLPredictor(BaseASLModel):
         # initialize preprocessor
         self.preprocessor = ASLPreprocessor()
 
+
         print(f"ASL Predictor initialized with {len(self.letters)} letters")
+
 
     def predict(self, image: Image.Image) -> Tuple[str, float]:
         """
@@ -65,6 +68,7 @@ class ASLPredictor(BaseASLModel):
 
         Args:
             image: PIL Image to predict
+
 
         Returns:
             Tuple of (predicted_letter, confidence_score)
@@ -75,6 +79,7 @@ class ASLPredictor(BaseASLModel):
             images=processed_image,
             return_tensors="pt",
             padding=True,
+            padding=True,
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
@@ -83,7 +88,7 @@ class ASLPredictor(BaseASLModel):
             probs = outputs.logits_per_image.softmax(dim=1)
 
         pred_idx = probs.argmax().item()
-        confidence = probs.max().item()
+        confidence2 = probs.max().item()
         predicted_letter = self.letters[pred_idx]
 
         return predicted_letter, confidence
@@ -91,10 +96,10 @@ class ASLPredictor(BaseASLModel):
     def predict_from_path(self, image_path: str) -> Tuple[str, float]:
         """
         Predict ASL letter from an image file path
-        
+
         Args:
             image_path: Path to image file
-            
+
         Returns:
             Tuple of (predicted_letter, confidence_score)
         """
@@ -102,16 +107,18 @@ class ASLPredictor(BaseASLModel):
             image = Image.open(image_path)
             return self.predict(image)
         except Exception as e:
-            raise ValueError(f"Error loading image from {image_path}: {e}")
-    
-    def predict_from_dataset(self, index: int = 0, split: str = "train") -> Tuple[str, float, str]:
+            raise ValueError(f"Error loading image from {image_path}: {e}") from e
+
+    def predict_from_dataset(
+        self, index: int = 0, split: str = "train"
+    ) -> Tuple[str, float, str]:
         """
         Predict ASL letter from ASL dataset
-        
+
         Args:
             index: Index of image in dataset
             split: Dataset split to use (train/test)
-            
+
         Returns:
             Tuple of (predicted_letter, confidence_score, true_letter)
         """
@@ -135,11 +142,11 @@ class ASLPredictor(BaseASLModel):
     def get_top_predictions(self, image: Image.Image, top_k: int = 3) -> list:
         """
         Get top-k predictions with confidence scores
-        
+
         Args:
             image: PIL Image to predict
             top_k: Number of top predictions to return
-            
+
         Returns:
             List of tuples (letter, confidence) sorted by confidence
         """
@@ -149,7 +156,7 @@ class ASLPredictor(BaseASLModel):
         inputs = self.processor(
             images=processed_image,
             return_tensors="pt",
-            padding=True
+            padding=True,
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 

@@ -51,5 +51,5 @@ class TranslatorView(APIView):
                 i.verify()
             image.seek(0)
             return True
-        except Exception:
+        except (OSError, ValueError):
             return False

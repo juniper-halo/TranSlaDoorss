@@ -1,8 +1,19 @@
-import pytest
-from rest_framework.test import APIClient
-from rest_framework.response import Response
-from hashlib import sha256
 import os
+import sys
+from hashlib import sha256
+from io import BytesIO
+
+from PIL import Image
+from rest_framework.test import APIClient
+
+# Add the root directory to path to import from development
+sys.path.append(
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+)
+from ml_dev.development.preprocessing import \
+    ASLPreprocessor  # pylint: disable=wrong-import-position
 
 test_path = os.path.dirname(__file__) + "/test_cases/"
 
@@ -10,44 +21,61 @@ test_path = os.path.dirname(__file__) + "/test_cases/"
 def test_translate_valid_image_png():
     # Create new client to send some requests
     client = APIClient()
-    hasher = sha256()
-    with open(test_path + "png_test.png", "rb") as f:
-        while chunk := f.read(8192):
-            hasher.update(chunk)
-        # With key "image", add png_test.png as raw bytes and also an irrelevant "language" tag
-        # POST request to /img_in/translate/
-        f.seek(0)
-        response = client.post(
-            "/img_in/translate/", {"image": f, "language": "ASL"}, format="multipart"
-        )
+    # Read the original bytes once, build expected hash from the preprocessed image
+    with open(test_path + "png_test.PNG", "rb") as f:
+        raw_bytes = f.read()
+
+    # Compute expected hash by preprocessing the image exactly like the server does
+    preprocessor = ASLPreprocessor()
+    pil_image = Image.open(BytesIO(raw_bytes))
+    preprocessed = preprocessor.preprocess(pil_image)
+    buf = BytesIO()
+    preprocessed.save(buf, format="PNG")
+    expected_hash = sha256(buf.getvalue()).hexdigest()
+
+    # POST the original uploaded bytes
+    upload_file = BytesIO(raw_bytes)
+    upload_file.name = "png_test.PNG"
+    response = client.post(
+        "/img_in/translate/",
+        {"image": upload_file, "language": "ASL"},
+        format="multipart",
+    )
     try:
         assert response.status_code == 200
-    except AssertionError:
+    except AssertionError as exc:
         print(response.status_code)
         if "error" in response.data:
             print(response.data["error"])
-        raise AssertionError
+        raise AssertionError from exc
     assert "translation" in response.data
-    assert response.data["translation"] == hasher.hexdigest()
+    assert response.data["translation"] == expected_hash
 
 
 def test_translate_valid_image_jpg():
     # Create new client to send some requests
     client = APIClient()
-    hasher = sha256()
+    # Read original bytes and compute expected hash after preprocessing
     with open(test_path + "jpg_test.jpg", "rb") as f:
-        while chunk := f.read(8192):
-            hasher.update(chunk)
-        # With key "image", add jpg_test.jpg as raw bytes and also an irrelevant "language" tag
-        # POST request to /img_in/translate/
-        f.seek(0)
-        response = client.post(
-            "/img_in/translate/", {"image": f, "language": "ASL"}, format="multipart"
-        )
+        raw_bytes = f.read()
+
+    preprocessor = ASLPreprocessor()
+    pil_image = Image.open(BytesIO(raw_bytes))
+    preprocessed = preprocessor.preprocess(pil_image)
+    buf = BytesIO()
+    preprocessed.save(buf, format="PNG")
+    expected_hash = sha256(buf.getvalue()).hexdigest()
+
+    upload_file = BytesIO(raw_bytes)
+    upload_file.name = "jpg_test.jpg"
+    response = client.post(
+        "/img_in/translate/",
+        {"image": upload_file, "language": "ASL"},
+        format="multipart",
+    )
     assert response.status_code == 200
     assert "translation" in response.data
-
-    assert response.data["translation"] == hasher.hexdigest()
+    assert response.data["translation"] == expected_hash
 
 
 def test_translate_invalid_txt():
