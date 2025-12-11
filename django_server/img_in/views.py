@@ -16,11 +16,12 @@ from ml_dev.inference.service import predict_from_file  # noqa: E402
 
 
 class PredictionRequestSerializer(serializers.Serializer):
-    top_k = serializers.IntegerField(required=False, min_value=1, max_value=26, default=1)
+    top_k = serializers.IntegerField(
+        required=False, min_value=1, max_value=26, default=1
+    )
 
 
 class TranslatorView(APIView):
-
     """
     accepts an uploaded image and returns the predicted ASL letter plus confidence.
     """
@@ -28,7 +29,10 @@ class TranslatorView(APIView):
     def post(self, request: Request):
         image = request.FILES.get("image")
         if image is None:
-            return Response({"error": "No submitted image found."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No submitted image found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Validate optional params
         serializer = PredictionRequestSerializer(data=request.data)
@@ -36,12 +40,18 @@ class TranslatorView(APIView):
         top_k = serializer.validated_data.get("top_k", 1)
 
         if not self.verify_image(image):
-            return Response({"error": "Invalid/corrupted image."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid/corrupted image."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             prediction = predict_from_file(image, top_k=top_k)
         except Exception as exc:
-            return Response({"error": f"Failed to run prediction: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": f"Failed to run prediction: {exc}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response({"prediction": prediction}, status=status.HTTP_200_OK)
 

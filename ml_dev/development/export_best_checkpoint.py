@@ -6,6 +6,7 @@ usage:
 
 writes best_checkpoint.json that load_best_checkpoint.py and the service can consume
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,7 +41,9 @@ def select_best_checkpoint(output_dir: Path, metric: str) -> Tuple[Path, Dict]:
 
         current_better = value > best_metrics.get(metric, float("-inf"))
         tie = value == best_metrics.get(metric)
-        loss_better = metrics.get("loss", float("inf")) < best_metrics.get("loss", float("inf"))
+        loss_better = metrics.get("loss", float("inf")) < best_metrics.get(
+            "loss", float("inf")
+        )
 
         if current_better or (tie and loss_better):
             best_metrics = metrics
@@ -68,9 +71,19 @@ def write_best_config(output_dir: Path, checkpoint_dir: Path, metrics: Dict) -> 
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="select best checkpoint and emit config file")
-    parser.add_argument("--output-dir", required=True, help="training output directory with metrics_epoch_*.json files")
-    parser.add_argument("--metric", default="accuracy", help="metric name to maximize when selecting best checkpoint")
+    parser = argparse.ArgumentParser(
+        description="select best checkpoint and emit config file"
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="training output directory with metrics_epoch_*.json files",
+    )
+    parser.add_argument(
+        "--metric",
+        default="accuracy",
+        help="metric name to maximize when selecting best checkpoint",
+    )
     return parser.parse_args()
 
 

@@ -13,31 +13,34 @@ run (from repo root):
 - python -m ml_dev.testing.evaluator --model-id ml_dev/saved_weights/epoch_7 --num-samples 50 --split train
 """
 
-from pathlib import Path
-import sys
-import os
 import argparse
+import os
+import sys
+from pathlib import Path
 
 # add project root to sys.path for direct script runs
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import torch
-import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
 from datasets import load_dataset
+
 from ml_dev.development.clip_base import BaseASLModel
 from ml_dev.inference.clip_asl_inference import ASLPredictor
 
 
 class ASLEvaluator:
     """Comprehensive evaluator for ASL predictors (CLI-friendly)"""
-    
-    def __init__(self, model: Optional[BaseASLModel] = None, dataset_name: str = "aliciiavs/sign_language_image_dataset"):
+
+    def __init__(
+        self,
+        model: Optional[BaseASLModel] = None,
+        dataset_name: str = "aliciiavs/sign_language_image_dataset",
+    ):
         self.model = model or ASLPredictor()
         self.dataset_name = dataset_name
         self.dataset = None
@@ -54,18 +57,18 @@ class ASLEvaluator:
         """Run comprehensive evaluation"""
         if self.dataset is None:
             self.load_dataset()
-        
+
         # default to train if caller skipped load_dataset
-        if not hasattr(self, 'split'):
-            self.split = 'train'
-        
+        if not hasattr(self, "split"):
+            self.split = "train"
+
         print(f"\n{'='*60}")
         print(f"COMPREHENSIVE EVALUATION - {self.model.__class__.__name__}")
         print(f"{'='*60}")
-        
+
         basic_results = self._evaluate_basic(num_samples)
         detailed_results = self._analyze_detailed(num_samples)
-        
+
         results = {
             "model_name": self.model.__class__.__name__,
             "basic_evaluation": basic_results,
@@ -88,24 +91,28 @@ class ASLEvaluator:
             image = sample["image"]
             true_label = sample["label"]
             true_letter = self.model.letters[true_label]
-            
+
             pred_letter, confidence, _ = self._predict(image)
-            
+
             if pred_letter == true_letter:
                 correct += 1
 
             confidences.append(confidence)
-            all_predictions.append({
-                'true_letter': true_letter,
-                'pred_letter': pred_letter,
-                'confidence': confidence,
-                'correct': pred_letter == true_letter,
-                'sample_index': i
-            })
-            
+            all_predictions.append(
+                {
+                    "true_letter": true_letter,
+                    "pred_letter": pred_letter,
+                    "confidence": confidence,
+                    "correct": pred_letter == true_letter,
+                    "sample_index": i,
+                }
+            )
+
             if i < 3:  # show first few examples
-                print(f"Sample {i}: True={true_letter}, Pred={pred_letter}, Conf={confidence:.3f}")
-        
+                print(
+                    f"Sample {i}: True={true_letter}, Pred={pred_letter}, Conf={confidence:.3f}"
+                )
+
         accuracy = correct / num_samples
         avg_confidence = np.mean(confidences)
 
@@ -128,12 +135,14 @@ class ASLEvaluator:
         if isinstance(result, tuple) and len(result) == 2:
             letter, confidence = result
             return letter, confidence, None
-        raise ValueError("Unexpected prediction format; expected tuple of length 2 or 3.")
-    
+        raise ValueError(
+            "Unexpected prediction format; expected tuple of length 2 or 3."
+        )
+
     def _analyze_detailed(self, num_samples: int) -> Dict[str, Any]:
         """Detailed analysis of model performance (confusion, per-letter, confidence spread)."""
         print("Running detailed analysis...")
-        
+
         confusion_matrix = self._compute_confusion_matrix(num_samples)
         confidence_analysis = self._analyze_confidence_distribution(num_samples)
         per_letter_performance = self._analyze_per_letter_performance(num_samples)
@@ -155,10 +164,10 @@ class ASLEvaluator:
             image = sample["image"]
             true_label = sample["label"]
             true_letter = self.model.letters[true_label]
-            
+
             pred_letter, _, _ = self._predict(image)
             confusion[true_letter][pred_letter] += 1
-        
+
         # move counts into matrix form
         matrix = np.zeros((len(self.model.letters), len(self.model.letters)))
         for i, true_letter in enumerate(self.model.letters):
@@ -178,9 +187,9 @@ class ASLEvaluator:
             image = sample["image"]
             true_label = sample["label"]
             true_letter = self.model.letters[true_label]
-            
+
             pred_letter, confidence, _ = self._predict(image)
-            
+
             confidences.append(confidence)
 
             if pred_letter == true_letter:
@@ -215,15 +224,15 @@ class ASLEvaluator:
             image = sample["image"]
             true_label = sample["label"]
             true_letter = self.model.letters[true_label]
-            
+
             pred_letter, confidence, _ = self._predict(image)
-            
-            letter_stats[true_letter]['total'] += 1
-            letter_stats[true_letter]['confidences'].append(confidence)
-            
+
+            letter_stats[true_letter]["total"] += 1
+            letter_stats[true_letter]["confidences"].append(confidence)
+
             if pred_letter == true_letter:
-                letter_stats[true_letter]['correct'] += 1
-        
+                letter_stats[true_letter]["correct"] += 1
+
         # compute per-letter metrics
         per_letter_results = {}
         for letter in self.model.letters:
@@ -254,7 +263,7 @@ class ASLEvaluator:
             image = sample["image"]
             true_label = sample["label"]
             true_letter = self.model.letters[true_label]
-            
+
             pred_letter, confidence, probs = self._predict(image)
             top3 = None
             if probs is not None:
@@ -265,65 +274,102 @@ class ASLEvaluator:
                     top3 = [(l, c) for l, c in top_preds]
                 except Exception:
                     top3 = None
-            
+
             if confidence < 0.5 or pred_letter != true_letter:
-                difficult_samples.append({
-                    'index': i,
-                    'true_letter': true_letter,
-                    'pred_letter': pred_letter,
-                    'confidence': confidence,
-                    'correct': pred_letter == true_letter,
-                    'top3_probs': top3
-                })
-        
-        difficult_samples.sort(key=lambda x: x['confidence'])
-        
+                difficult_samples.append(
+                    {
+                        "index": i,
+                        "true_letter": true_letter,
+                        "pred_letter": pred_letter,
+                        "confidence": confidence,
+                        "correct": pred_letter == true_letter,
+                        "top3_probs": top3,
+                    }
+                )
+
+        difficult_samples.sort(key=lambda x: x["confidence"])
+
         return difficult_samples[:10]  # top ten most difficult
-    
-    def visualize_results(self, results: Dict[str, Any], save_path: Optional[str] = None):
+
+    def visualize_results(
+        self, results: Dict[str, Any], save_path: Optional[str] = None
+    ):
         """Visualize evaluation results"""
         print("Creating visualizations...")
-        
+
         # set up plots
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        
-        confusion_matrix = results['detailed_analysis']['confusion_matrix']
-        sns.heatmap(confusion_matrix, annot=True, fmt='g', cmap='Blues',
-                    xticklabels=self.model.letters, yticklabels=self.model.letters,
-                    ax=axes[0, 0])
-        axes[0, 0].set_title('Confusion Matrix')
-        axes[0, 0].set_xlabel('Predicted')
-        axes[0, 0].set_ylabel('True')
-        
-        confidence_analysis = results['detailed_analysis']['confidence_analysis']
-        axes[0, 1].hist(confidence_analysis['all_confidences'], bins=20, alpha=0.7, label='All')
-        axes[0, 1].hist(confidence_analysis['correct_confidences'], bins=20, alpha=0.7, label='Correct')
-        axes[0, 1].hist(confidence_analysis['incorrect_confidences'], bins=20, alpha=0.7, label='Incorrect')
-        axes[0, 1].set_title('Confidence Distribution')
-        axes[0, 1].set_xlabel('Confidence Score')
-        axes[0, 1].set_ylabel('Frequency')
+
+        confusion_matrix = results["detailed_analysis"]["confusion_matrix"]
+        sns.heatmap(
+            confusion_matrix,
+            annot=True,
+            fmt="g",
+            cmap="Blues",
+            xticklabels=self.model.letters,
+            yticklabels=self.model.letters,
+            ax=axes[0, 0],
+        )
+        axes[0, 0].set_title("Confusion Matrix")
+        axes[0, 0].set_xlabel("Predicted")
+        axes[0, 0].set_ylabel("True")
+
+        confidence_analysis = results["detailed_analysis"]["confidence_analysis"]
+        axes[0, 1].hist(
+            confidence_analysis["all_confidences"], bins=20, alpha=0.7, label="All"
+        )
+        axes[0, 1].hist(
+            confidence_analysis["correct_confidences"],
+            bins=20,
+            alpha=0.7,
+            label="Correct",
+        )
+        axes[0, 1].hist(
+            confidence_analysis["incorrect_confidences"],
+            bins=20,
+            alpha=0.7,
+            label="Incorrect",
+        )
+        axes[0, 1].set_title("Confidence Distribution")
+        axes[0, 1].set_xlabel("Confidence Score")
+        axes[0, 1].set_ylabel("Frequency")
         axes[0, 1].legend()
-        
-        per_letter = results['detailed_analysis']['per_letter_performance']
+
+        per_letter = results["detailed_analysis"]["per_letter_performance"]
         letters = list(per_letter.keys())
         accuracies = [per_letter[letter]["accuracy"] for letter in letters]
 
         axes[1, 0].bar(letters, accuracies)
-        axes[1, 0].set_title('Per-letter Accuracy')
-        axes[1, 0].set_xlabel('Letter')
-        axes[1, 0].set_ylabel('Accuracy')
-        axes[1, 0].tick_params(axis='x', rotation=45)
-        
-        basic = results['basic_evaluation']
-        axes[1, 1].text(0.1, 0.8, f"Overall Accuracy: {basic['accuracy']:.2%}", 
-                        transform=axes[1, 1].transAxes, fontsize=12)
-        axes[1, 1].text(0.1, 0.7, f"Average Confidence: {basic['avg_confidence']:.3f}", 
-                        transform=axes[1, 1].transAxes, fontsize=12)
-        axes[1, 1].text(0.1, 0.6, f"Correct Predictions: {basic['correct_predictions']}/{basic['total_predictions']}", 
-                        transform=axes[1, 1].transAxes, fontsize=12)
-        axes[1, 1].set_title('Performance Summary')
-        axes[1, 1].axis('off')
-        
+        axes[1, 0].set_title("Per-letter Accuracy")
+        axes[1, 0].set_xlabel("Letter")
+        axes[1, 0].set_ylabel("Accuracy")
+        axes[1, 0].tick_params(axis="x", rotation=45)
+
+        basic = results["basic_evaluation"]
+        axes[1, 1].text(
+            0.1,
+            0.8,
+            f"Overall Accuracy: {basic['accuracy']:.2%}",
+            transform=axes[1, 1].transAxes,
+            fontsize=12,
+        )
+        axes[1, 1].text(
+            0.1,
+            0.7,
+            f"Average Confidence: {basic['avg_confidence']:.3f}",
+            transform=axes[1, 1].transAxes,
+            fontsize=12,
+        )
+        axes[1, 1].text(
+            0.1,
+            0.6,
+            f"Correct Predictions: {basic['correct_predictions']}/{basic['total_predictions']}",
+            transform=axes[1, 1].transAxes,
+            fontsize=12,
+        )
+        axes[1, 1].set_title("Performance Summary")
+        axes[1, 1].axis("off")
+
         plt.tight_layout()
 
         if save_path:
@@ -411,7 +457,7 @@ class ModelComparison:
             evaluator.dataset = self.dataset
             model_results = evaluator.evaluate_comprehensive(num_samples)
             results[model.__class__.__name__] = model_results
-        
+
         comparison_summary = self._create_comparison_summary(results)
         results["comparison"] = comparison_summary
 
@@ -476,15 +522,24 @@ class ModelComparison:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run ASL evaluator on a predictor.")
-    parser.add_argument("--model-id", help="checkpoint path or HF model id; defaults to env ASL_MODEL_ID or base clip")
-    parser.add_argument("--num-samples", type=int, default=50, help="number of samples to evaluate")
+    parser.add_argument(
+        "--model-id",
+        help="checkpoint path or HF model id; defaults to env ASL_MODEL_ID or base clip",
+    )
+    parser.add_argument(
+        "--num-samples", type=int, default=50, help="number of samples to evaluate"
+    )
     parser.add_argument("--split", default="train", help="dataset split to use")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    model_id = args.model_id or os.environ.get("ASL_MODEL_ID") or "openai/clip-vit-base-patch32"
+    model_id = (
+        args.model_id
+        or os.environ.get("ASL_MODEL_ID")
+        or "openai/clip-vit-base-patch32"
+    )
     predictor = ASLPredictor(model_name=model_id)
     evaluator = ASLEvaluator(model=predictor)
     evaluator.load_dataset(split=args.split)

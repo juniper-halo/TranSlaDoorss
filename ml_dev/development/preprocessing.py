@@ -8,7 +8,7 @@ from PIL import Image
 
 class ASLPreprocessor:
     """preprocess asl sign images for clip"""
-    
+
     def __init__(self, target_size: int = 224):
         """init with target size (default 224 for clip)"""
         self.target_size = target_size
@@ -16,30 +16,32 @@ class ASLPreprocessor:
     def preprocess(self, image: Image.Image) -> Image.Image:
         """convert to rgb, center-crop square, resize to target"""
         # convert to rgb if needed
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
         # center crop to square handle aspect ratio
         image = self._center_crop_to_square(image)
-        
+
         # resize to target size with high quality resampling
-        image = image.resize((self.target_size, self.target_size), Image.Resampling.LANCZOS)
-        
+        image = image.resize(
+            (self.target_size, self.target_size), Image.Resampling.LANCZOS
+        )
+
         return image
 
     def _center_crop_to_square(self, image: Image.Image) -> Image.Image:
         """center crop to square aspect ratio"""
         width, height = image.size
-        
+
         # if already square return as is
         if width == height:
             return image
-        
+
         # calculate crop dimensions
         size = min(width, height)
         left = (width - size) // 2
         top = (height - size) // 2
-        
+
         # perform center crop
         cropped_image = image.crop((left, top, left + size, top + size))
 
@@ -69,7 +71,7 @@ class ASLPreprocessor:
         """
         original_size = image.size
         original_mode = image.mode
-        
+
         # apply preprocessing
         processed_image = self.preprocess(image)
         processed_size = processed_image.size

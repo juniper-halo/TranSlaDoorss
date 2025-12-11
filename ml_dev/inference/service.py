@@ -21,14 +21,13 @@ run the ad-hoc test main (from repo root):
 
 """
 
-
 # from __future__ import annotations
 
-from pathlib import Path
-import sys
 import io
 import os
+import sys
 from functools import lru_cache
+from pathlib import Path
 from typing import Dict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -39,13 +38,14 @@ from PIL import Image
 
 from ml_dev.inference.clip_asl_inference import ASLPredictor
 
-
 DEFAULT_MODEL_ID = os.environ.get("ASL_MODEL_ID", "openai/clip-vit-base-patch32")
 DEFAULT_DEVICE = os.environ.get("ASL_MODEL_DEVICE")
 
 
 @lru_cache(maxsize=4)
-def get_predictor(model_id: str | None = None, device: str | None = None) -> ASLPredictor:
+def get_predictor(
+    model_id: str | None = None, device: str | None = None
+) -> ASLPredictor:
     """
     lazily construct and cache a predictor instance so that model loading
     does not run inside each request path
@@ -81,7 +81,8 @@ def predict_from_file(
     top_predictions = predictor.get_top_predictions(image, top_k=top_k)
     return {
         "top_predictions": [
-            {"letter": letter, "confidence": confidence} for letter, confidence in top_predictions
+            {"letter": letter, "confidence": confidence}
+            for letter, confidence in top_predictions
         ]
     }
 
