@@ -1,5 +1,8 @@
 """
-CLIP fine-tuning structure for ASL letter recognition.
+clip fine tuning structure for asl letter recognition
+
+trains a clip vision tower on the asl dataset and saves checkpoints plus metrics files
+that can be selected later with export_best_checkpoint.py and loaded via the inference service
 """
 from __future__ import annotations
 
@@ -7,6 +10,7 @@ import argparse
 import dataclasses
 import json
 import logging
+import math
 import os
 import sys
 from pathlib import Path
@@ -16,9 +20,12 @@ import torch
 from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.tensorboard import SummaryWriter
 from transformers import CLIPModel, CLIPProcessor, get_linear_schedule_with_warmup
 
-# ensure project root is on sys.path when executed as a script
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+# ensure project root is on sys path when executed as a script
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
@@ -41,14 +48,16 @@ class DatasetConfig:
 @dataclasses.dataclass
 class TrainingConfig:
     model_name: str = "openai/clip-vit-base-patch32"
-    output_dir: str = "artifacts/clip_finetune"
-    epochs: int = 3
+    output_dir: str = "saved_weights"
+    epochs: int = 15
     batch_size: int = 32
     learning_rate: float = 1e-5
     weight_decay: float = 0.01
     warmup_steps: int = 0
     gradient_accumulation_steps: int = 1
     log_every_n_steps: int = 25
+    log_dir: Optional[str] = None
+    log_tensorboard: bool = True
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -85,7 +94,7 @@ class ASLFineTuner:
         dataset_cfg: DatasetConfig,
         training_cfg: TrainingConfig,
     ) -> None:
-        from datasets import load_dataset  # lazy import avoids CLI penalty
+        from datasets import load_dataset  # lazy import avoids cli penalty
 
         self.dataset_cfg = dataset_cfg
         self.training_cfg = training_cfg
@@ -95,6 +104,11 @@ class ASLFineTuner:
         self.model.to(training_cfg.device)
 
         self.preprocessor = ASLPreprocessor()
+        self.letters = [chr(65 + i) for i in range(26)]
+        self.text_prompts = [f"a photo of a hand showing the sign language letter {letter}" for letter in self.letters]
+        text_inputs = self.processor(text=self.text_prompts, return_tensors="pt", padding=True)
+        self.text_inputs = {k: v.to(training_cfg.device) for k, v in text_inputs.items()}
+        self.loss_fn = nn.CrossEntropyLoss()
 
         hf_dataset = load_dataset(dataset_cfg.name)
         train_split = hf_dataset[dataset_cfg.train_split]
@@ -113,6 +127,13 @@ class ASLFineTuner:
         self.optimizer = self._create_optimizer()
         self.scheduler = self._create_scheduler()
 
+        # logging
+        log_dir = Path(training_cfg.log_dir) if training_cfg.log_dir else Path(training_cfg.output_dir) / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.writer = SummaryWriter(log_dir) if training_cfg.log_tensorboard else None
+        if self.writer:
+            log.info("TensorBoard logging to %s", log_dir.resolve())
+
     def _create_optimizer(self) -> AdamW:
         params = [
             {"params": self.model.vision_model.parameters(), "lr": self.training_cfg.learning_rate},
@@ -120,13 +141,10 @@ class ASLFineTuner:
         return AdamW(params, lr=self.training_cfg.learning_rate, weight_decay=self.training_cfg.weight_decay)
 
     def _create_scheduler(self):
-        total_steps = (
-            len(self.train_dataset)
-            // self.training_cfg.batch_size
-            // self.training_cfg.gradient_accumulation_steps
-            * self.training_cfg.epochs
+        steps_per_epoch = math.ceil(len(self.train_dataset) / self.training_cfg.batch_size)
+        total_steps = max(
+            1, steps_per_epoch * self.training_cfg.epochs // self.training_cfg.gradient_accumulation_steps
         )
-        total_steps = max(1, total_steps)
         return get_linear_schedule_with_warmup(
             optimizer=self.optimizer,
             num_warmup_steps=self.training_cfg.warmup_steps,
@@ -149,13 +167,17 @@ class ASLFineTuner:
         self.model.train()
 
         for epoch in range(self.training_cfg.epochs):
+            running_loss = 0.0
+            running_correct = 0
+            running_total = 0
+
             for step, batch in enumerate(train_loader):
                 batch = {k: v.to(self.training_cfg.device) for k, v in batch.items()}
-                outputs = self.model(**batch)
-                loss = outputs.logits_per_image.softmax(dim=1)  # placeholder
-
-                # TODO: replace with cross-entropy against labels
-                loss = torch.tensor(0.0, device=self.training_cfg.device)
+                labels = batch.pop("labels")
+                outputs = self.model(**batch, **self.text_inputs)
+                logits = outputs.logits_per_image
+                raw_loss = self.loss_fn(logits, labels)
+                loss = raw_loss / self.training_cfg.gradient_accumulation_steps
                 loss.backward()
 
                 if (step + 1) % self.training_cfg.gradient_accumulation_steps == 0:
@@ -164,19 +186,66 @@ class ASLFineTuner:
                     self.optimizer.zero_grad(set_to_none=True)
                     global_step += 1
 
+                    batch_pred = logits.argmax(dim=1)
+                    running_total += labels.size(0)
+                    running_correct += (batch_pred == labels).sum().item()
+                    running_loss += raw_loss.item()
+
                     if global_step % self.training_cfg.log_every_n_steps == 0:
-                        log.info("Epoch %s step %s placeholder loss %.4f", epoch, global_step, loss.item())
+                        avg_loss = running_loss / max(1, running_total)
+                        acc = running_correct / max(1, running_total)
+                        log.info("Epoch %s step %s | loss %.4f | acc %.3f", epoch, global_step, avg_loss, acc)
+                        if self.writer:
+                            self.writer.add_scalar("train/loss", avg_loss, global_step)
+                            self.writer.add_scalar("train/accuracy", acc, global_step)
 
             if val_loader:
-                self.evaluate(val_loader, epoch)
+                eval_metrics = self.evaluate(val_loader, epoch)
+                if self.writer:
+                    self.writer.add_scalar("val/loss", eval_metrics["loss"], epoch)
+                    self.writer.add_scalar("val/accuracy", eval_metrics["accuracy"], epoch)
+                self._write_metrics(eval_metrics, epoch)
 
             self.save_checkpoint(epoch)
 
-    def evaluate(self, dataloader: DataLoader, epoch: int) -> None:
+    def evaluate(self, dataloader: DataLoader, epoch: int) -> Dict[str, Any]:
         self.model.eval()
-        # TODO: add model evaluation logic (accuracy, confusion matrix, etc.)
-        log.info("Ran evaluation epoch %s (placeholder)", epoch)
+        total_loss = 0.0
+        total_correct = 0
+        total_samples = 0
+        confusion = torch.zeros(len(self.letters), len(self.letters), dtype=torch.long)
+
+        with torch.no_grad():
+            for batch in dataloader:
+                batch = {k: v.to(self.training_cfg.device) for k, v in batch.items()}
+                labels = batch.pop("labels")
+                outputs = self.model(**batch, **self.text_inputs)
+                logits = outputs.logits_per_image
+                loss = self.loss_fn(logits, labels)
+
+                preds = logits.argmax(dim=1)
+                total_correct += (preds == labels).sum().item()
+                total_samples += labels.size(0)
+                total_loss += loss.item() * labels.size(0)
+                for true_label, pred_label in zip(labels.cpu(), preds.cpu()):
+                    confusion[true_label.long(), pred_label.long()] += 1
+
+        avg_loss = total_loss / max(1, total_samples)
+        accuracy = total_correct / max(1, total_samples)
+        per_class_total = confusion.sum(dim=1)
+        per_class_correct = confusion.diag()
+        per_class_accuracy = torch.where(per_class_total > 0, per_class_correct.float() / per_class_total.float(), torch.zeros_like(per_class_total, dtype=torch.float))
+
+        metrics = {
+            "loss": avg_loss,
+            "accuracy": accuracy,
+            "per_class_accuracy": {letter: per_class_accuracy[idx].item() for idx, letter in enumerate(self.letters)},
+        }
+
+        log.info("Validation epoch %s | loss %.4f | accuracy %.3f", epoch, avg_loss, accuracy)
+        log.debug("Per-class accuracy: %s", metrics["per_class_accuracy"])
         self.model.train()
+        return metrics
 
     def save_checkpoint(self, epoch: int) -> None:
         output_dir = Path(self.training_cfg.output_dir)
@@ -199,6 +268,17 @@ class ASLFineTuner:
             )
 
         log.info("Saved checkpoint to %s", checkpoint_dir)
+        if self.writer:
+            self.writer.flush()
+
+    def _write_metrics(self, metrics: Dict[str, Any], epoch: int) -> None:
+        """Persist evaluation metrics to disk for later comparison."""
+        output_dir = Path(self.training_cfg.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        metrics_path = output_dir / f"metrics_epoch_{epoch}.json"
+        with metrics_path.open("w", encoding="utf-8") as fp:
+            json.dump(metrics, fp, indent=2)
+        log.info("Saved metrics to %s", metrics_path)
 
 
 def parse_args() -> argparse.Namespace:
@@ -239,6 +319,7 @@ def main() -> None:
     dataset_cfg, training_cfg = load_configs(args.config, args.output_dir)
     trainer = ASLFineTuner(dataset_cfg, training_cfg)
     trainer.train()
+    log.info("training complete; run export_best_checkpoint.py to pick a best checkpoint based on metrics")
 
 
 if __name__ == "__main__":

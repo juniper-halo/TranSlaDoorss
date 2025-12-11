@@ -1,0 +1,6 @@
+# Ignore large model checkpoints to avoid accidental scans
+ml_dev/saved_weights/
+ml_dev/__pycache__/
+ml_dev/development/__pycache__/
+ml_dev/inference/__pycache__/
+ml_dev/testing/__pycache__/
