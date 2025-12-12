@@ -1,0 +1,2 @@
+# Skip heavy model checkpoints during searches
+ml_dev/saved_weights/

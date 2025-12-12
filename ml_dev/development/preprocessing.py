@@ -1,5 +1,5 @@
 """
-ASL Image Preprocessing Pipeline
+asl image preprocessing pipeline (resize/crop to clip-friendly rgb square)
 """
 
 import numpy as np
@@ -7,35 +7,22 @@ from PIL import Image
 
 
 class ASLPreprocessor:
-    """Preprocessing pipeline for ASL sign language images"""
+    """preprocess asl sign images for clip"""
 
     def __init__(self, target_size: int = 224):
-        """
-        Initialize the ASL preprocessor
-
-        Args:
-            target_size: Target size for the output image (default: 224x224 for CLIP)
-        """
+        """init with target size (default 224 for clip)"""
         self.target_size = target_size
 
     def preprocess(self, image: Image.Image) -> Image.Image:
-        """
-        Preprocess an image for ASL recognition
-
-        Args:
-            image: PIL Image to preprocess
-
-        Returns:
-            Preprocessed PIL Image ready for CLIP inference
-        """
-        # convert to RGB if needed
+        """convert to rgb, center-crop square, resize to target"""
+        # convert to rgb if needed
         if image.mode != "RGB":
             image = image.convert("RGB")
 
-        # center crop to square (handle aspect ratio)
+        # center crop to square handle aspect ratio
         image = self._center_crop_to_square(image)
 
-        # resize to target size with high-quality resampling
+        # resize to target size with high quality resampling
         image = image.resize(
             (self.target_size, self.target_size), Image.Resampling.LANCZOS
         )
@@ -43,18 +30,10 @@ class ASLPreprocessor:
         return image
 
     def _center_crop_to_square(self, image: Image.Image) -> Image.Image:
-        """
-        Center crop image to square aspect ratio
-
-        Args:
-            image: PIL Image to crop
-
-        Returns:
-            Center-cropped square PIL Image
-        """
+        """center crop to square aspect ratio"""
         width, height = image.size
 
-        # if already square, return as-is
+        # if already square return as is
         if width == height:
             return image
 
@@ -107,6 +86,7 @@ class ASLPreprocessor:
         }
 
 
+# test the preprocessor
 # test the preprocessor
 if __name__ == "__main__":
 
