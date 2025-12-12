@@ -1,101 +1,81 @@
 """
-asl predictor built on clip
-
-wraps a base or fine tuned checkpoint with asl prompts/preprocessing; used by:
-- inference service (ml_dev.inference.service.get_predictor / django)
-- testing/evaluator (ml_dev.testing.evaluator)
-
-run (from repo root):
-- set ASL_MODEL_ID to a fine-tuned checkpoint (e.g. ml_dev/saved_weights/epoch_7) or pass --model-id
-- python -m ml_dev.inference.clip_asl_inference --model-id ml_dev/saved_weights/epoch_7 --image path/to/image.jpg --top-k 3
+ASL Letter Recognition using CLIP
 """
 
 import os
 import sys
-from typing import List, Optional, Tuple
+from typing import Tuple
 
 import torch
 from datasets import load_dataset
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
-# add the parent directory to path to import from development
+# Add the parent directory to path to import from development
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from development.clip_base import BaseASLModel
-from development.preprocessing import ASLPreprocessor
+from development.preprocessing import \
+    ASLPreprocessor  # pylint: disable=wrong-import-position
 
 
-class ASLPredictor(BaseASLModel):
-    """ASL letter recognition using CLIP model."""
+class ASLPredictor:
+    """ASL letter recognition using CLIP model"""
 
-    def __init__(
-        self,
-        model_name: str = "openai/clip-vit-base-patch32",
-        device: Optional[str] = None,
-    ):
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
         """
-        Initialize the ASL predictor.
+        Initialize the ASL predictor
 
         Args:
-            model_name: model id to load (hf repo id or local checkpoint); defaults to base clip when service does not set ASL_MODEL_ID.
-            device: optional torch device string. defaults to "cuda" if available.
+            model_name: CLIP model name to use
         """
-        target_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = torch.device(target_device)
-
-        print(f"Loading CLIP model on {self.device}...")
+        print("Loading CLIP model...")
         self.model = CLIPModel.from_pretrained(model_name)
-        self.model.to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
 
-        # set up letters and text prompts
-        self.letters: List[str] = [chr(65 + i) for i in range(26)]  # a to z
+        # Setup letters and text prompts
+        self.letters = [chr(65 + i) for i in range(26)]  # A-Z
         self.text_prompts = [
             f"a photo of a hand showing the sign language letter {letter}"
             for letter in self.letters
         ]
 
-        # prepare text inputs once for reuse
-        text_inputs = self.processor(
-            text=self.text_prompts, return_tensors="pt", padding=True
-        )
-        self.text_inputs = {k: v.to(self.device) for k, v in text_inputs.items()}
+        self.dataset = None
 
-        # initialize preprocessor
+        # Initialize preprocessor
         self.preprocessor = ASLPreprocessor()
 
         print(f"ASL Predictor initialized with {len(self.letters)} letters")
 
     def predict(self, image: Image.Image) -> Tuple[str, float]:
         """
-        Predict ASL letter from an image.
+        Predict ASL letter from an image
 
         Args:
             image: PIL Image to predict
 
-
         Returns:
             Tuple of (predicted_letter, confidence_score)
         """
+        # Preprocess the image
         processed_image = self.preprocessor.preprocess(image)
 
+        # Run CLIP inference
         inputs = self.processor(
+            text=self.text_prompts,
             images=processed_image,
             return_tensors="pt",
             padding=True,
-            padding=True,
         )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
-            outputs = self.model(**inputs, **self.text_inputs)
+            outputs = self.model(**inputs)
             probs = outputs.logits_per_image.softmax(dim=1)
 
+        # Get prediction
         pred_idx = probs.argmax().item()
         confidence2 = probs.max().item()
         predicted_letter = self.letters[pred_idx]
 
-        return predicted_letter, confidence
+        return predicted_letter, confidence2
 
     def predict_from_path(self, image_path: str) -> Tuple[str, float]:
         """
@@ -126,22 +106,22 @@ class ASLPredictor(BaseASLModel):
         Returns:
             Tuple of (predicted_letter, confidence_score, true_letter)
         """
-        # load dataset cached after first load
+        # Load dataset (cached after first load)
         if not hasattr(self, "dataset"):
             print("Loading ASL dataset...")
             self.dataset = load_dataset("aliciiavs/sign_language_image_dataset")
             print(f"Dataset loaded with {len(self.dataset[split])} samples")
 
-        # get image and true label
+        # Get image and true label
         sample = self.dataset[split][index]
         image = sample["image"]
         true_label = sample["label"]
-        true_letter = self.letters[true_label]
+        true_letter2 = self.letters[true_label]
 
-        # predict
-        predicted_letter, confidence = self.predict(image)
+        # Predict
+        predicted_letter, confidence3 = self.predict(image)
 
-        return predicted_letter, confidence, true_letter
+        return predicted_letter, confidence3, true_letter2
 
     def get_top_predictions(self, image: Image.Image, top_k: int = 3) -> list:
         """
@@ -154,58 +134,58 @@ class ASLPredictor(BaseASLModel):
         Returns:
             List of tuples (letter, confidence) sorted by confidence
         """
-        # preprocess the image
+        # Preprocess the image
         processed_image = self.preprocessor.preprocess(image)
 
+        # Run CLIP inference
         inputs = self.processor(
+            text=self.text_prompts,
             images=processed_image,
             return_tensors="pt",
             padding=True,
         )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
-            outputs = self.model(**inputs, **self.text_inputs)
+            outputs = self.model(**inputs)
             probs = outputs.logits_per_image.softmax(dim=1)
 
+        # Get top-k predictions
         top_probs, top_indices = torch.topk(probs[0], top_k)
 
-        top_predictions = []
-        for i in range(top_k):
-            letter = self.letters[top_indices[i].item()]
-            confidence = top_probs[i].item()
-            top_predictions.append((letter, confidence))
+        top_predictions2 = []
+        for k in range(top_k):
+            letter2 = self.letters[top_indices[k].item()]
+            confidence = top_probs[k].item()
+            top_predictions2.append((letter2, confidence))
 
-        return top_predictions
+        return top_predictions2
 
 
-# example usage and testing
+# Example usage and testing
 if __name__ == "__main__":
-    import argparse
+    print("Testing ASL Predictor...")
 
-    parser = argparse.ArgumentParser(description="run a quick ASL prediction")
-    parser.add_argument(
-        "--model-id",
-        default=os.environ.get("ASL_MODEL_ID", "openai/clip-vit-base-patch32"),
-        help="hf repo id or local checkpoint; defaults to ASL_MODEL_ID or base clip",
-    )
-    parser.add_argument("--image", required=True, help="path to image file")
-    parser.add_argument(
-        "--top-k", type=int, default=3, help="number of top predictions to print"
-    )
-    args = parser.parse_args()
+    # Initialize predictor
+    predictor = ASLPredictor()
 
-    predictor = ASLPredictor(model_name=args.model_id)
+    # Test with dataset
+    print("\nTesting with ASL dataset (index 0):")
     try:
-        img = Image.open(args.image)
-    except Exception as exc:
-        raise SystemExit(f"failed to load image {args.image}: {exc}")
+        pred_letter, confidence4, true_letter = predictor.predict_from_dataset(index=0)
+        print(f"True letter: {true_letter}")
+        print(f"Predicted letter: {pred_letter}")
+        print(f"Confidence: {confidence4:.3f}")
+        print(f"Correct: {pred_letter == true_letter}")
 
-    letter, conf = predictor.predict(img)
-    print(f"predicted: {letter} (conf {conf:.3f})")
+        # Get top 3 predictions
+        print("\nTop 3 predictions:")
+        top_predictions = predictor.get_top_predictions(
+            predictor.dataset["train"][0]["image"], top_k=3
+        )
+        for i, (letter, conf) in enumerate(top_predictions):
+            print(f"  {i+1}. {letter}: {conf:.3f}")
 
-    if args.top_k and args.top_k > 1:
-        tops = predictor.get_top_predictions(img, top_k=args.top_k)
-        print("top predictions:")
-        for rank, (ltr, c) in enumerate(tops, start=1):
-            print(f"  {rank}. {ltr}: {c:.3f}")
+    except Exception as e:
+        print(f"Error testing with dataset: {e}")
+
+    print("\nASL Predictor test completed!")
