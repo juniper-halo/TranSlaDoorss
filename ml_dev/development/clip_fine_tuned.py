@@ -118,6 +118,27 @@ class ASLFineTuner:
         }
         self.loss_fn = nn.CrossEntropyLoss()
 
+        # Prepare textual prompts and precompute text features (kept fixed here?)
+        self.letters = [chr(65 + i) for i in range(26)]
+        self.text_prompts = [
+            f"a photo of a hand showing the sign language letter {letter}"
+            for letter in self.letters
+        ]
+
+        # tokenize and compute text features
+        tokenized = self.processor(
+            text=self.text_prompts, return_tensors="pt", padding=True
+        )
+        tokenized = {k: v.to(training_cfg.device) for k, v in tokenized.items()}
+        with torch.no_grad():
+            text_feats = self.model.get_text_features(**tokenized)
+            text_feats = text_feats / text_feats.norm(dim=-1, keepdim=True)
+        self.register_buffer = None  # placeholder
+        self.text_features = text_feats
+
+        # loss
+        self.criterion = nn.CrossEntropyLoss()
+
         hf_dataset = load_dataset(dataset_cfg.name)
         train_split = hf_dataset[dataset_cfg.train_split]
 
@@ -208,6 +229,9 @@ class ASLFineTuner:
                 loss = raw_loss / self.training_cfg.gradient_accumulation_steps
                 loss.backward()
 
+                epoch_loss += loss.item()
+                epoch_steps += 1
+
                 if (step + 1) % self.training_cfg.gradient_accumulation_steps == 0:
                     self.optimizer.step()
                     self.scheduler.step()
@@ -232,6 +256,14 @@ class ASLFineTuner:
                         if self.writer:
                             self.writer.add_scalar("train/loss", avg_loss, global_step)
                             self.writer.add_scalar("train/accuracy", acc, global_step)
+
+                        avg_loss = epoch_loss / max(1, epoch_steps)
+                        log.info(
+                            "Epoch %s step %s loss %.4f", epoch, global_step, avg_loss
+                        )
+
+            avg_epoch_loss = epoch_loss / max(1, epoch_steps)
+            log.info("Finished epoch %s - avg loss: %.4f", epoch, avg_epoch_loss)
 
             if val_loader:
                 eval_metrics = self.evaluate(val_loader, epoch)
