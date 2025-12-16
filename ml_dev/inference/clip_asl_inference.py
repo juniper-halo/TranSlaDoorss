@@ -45,7 +45,7 @@ class ASLPredictor(BaseASLModel):
 
         print(f"Loading CLIP model on {self.device}...")
         self.model = CLIPModel.from_pretrained(model_name)
-        
+
         # Try to move model to device, fall back to CPU if CUDA kernel error occurs
         try:
             self.model.to(self.device)
@@ -56,13 +56,15 @@ class ASLPredictor(BaseASLModel):
                 print(f"CUDA compatibility check passed on {self.device}")
         except RuntimeError as e:
             if "CUDA error" in str(e) and "no kernel image is available" in str(e):
-                print(f"Warning: CUDA kernel not compatible with device. Falling back to CPU.")
+                print(
+                    f"Warning: CUDA kernel not compatible with device. Falling back to CPU."
+                )
                 print(f"Error details: {e}")
                 self.device = torch.device("cpu")
                 self.model.to(self.device)
             else:
                 raise
-        
+
         self.processor = CLIPProcessor.from_pretrained(model_name)
 
         # set up letters and text prompts
@@ -81,7 +83,9 @@ class ASLPredictor(BaseASLModel):
         # initialize preprocessor
         self.preprocessor = ASLPreprocessor()
 
-        print(f"ASL Predictor initialized with {len(self.letters)} letters on {self.device}")
+        print(
+            f"ASL Predictor initialized with {len(self.letters)} letters on {self.device}"
+        )
 
     def predict(self, image: Image.Image) -> Tuple[str, float]:
         """
@@ -97,9 +101,7 @@ class ASLPredictor(BaseASLModel):
         processed_image = self.preprocessor.preprocess(image)
 
         inputs = self.processor(
-            images=processed_image,
-            return_tensors="pt",
-            padding=True
+            images=processed_image, return_tensors="pt", padding=True
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 

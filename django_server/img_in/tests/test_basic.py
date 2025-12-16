@@ -198,7 +198,7 @@ def test_feedback_missing_labels():
 
     upload_file = BytesIO(raw_bytes)
     upload_file.name = "test.png"
-    
+
     # Missing correct_label
     response = client.post(
         "/img_in/feedback/",
@@ -220,7 +220,7 @@ def test_feedback_invalid_label_format():
 
     upload_file = BytesIO(raw_bytes)
     upload_file.name = "test.png"
-    
+
     # Lowercase letter should fail
     response = client.post(
         "/img_in/feedback/",

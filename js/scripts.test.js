@@ -26,8 +26,8 @@ beforeEach(() => {
 
   // Mock video dimensions for captureFrame
   const video = document.getElementById("webcam");
-  Object.defineProperty(video, 'videoWidth', { value: 640, writable: true });
-  Object.defineProperty(video, 'videoHeight', { value: 480, writable: true });
+  Object.defineProperty(video, "videoWidth", { value: 640, writable: true });
+  Object.defineProperty(video, "videoHeight", { value: 480, writable: true });
 
   // Mock URL.createObjectURL
   global.URL.createObjectURL = jest.fn(() => "blob:mock-url");
@@ -119,9 +119,10 @@ test("requestTranslation send frame and update translation result", async () => 
 
   // Mock fetch - return a fake successful response with new prediction format
   global.fetch = jest.fn().mockResolvedValue({
-    json: () => Promise.resolve({
-      prediction: { letter: "A", confidence: 0.95 }
-    }),
+    json: () =>
+      Promise.resolve({
+        prediction: { letter: "A", confidence: 0.95 },
+      }),
   });
 
   // Call the function
@@ -145,14 +146,13 @@ test("requestTranslation send frame and update translation result", async () => 
 
   // Try again with a different translation
   fetch.mockResolvedValueOnce({
-    json: () => Promise.resolve({
-      prediction: { letter: "B", confidence: 0.87 }
-    }),
+    json: () =>
+      Promise.resolve({
+        prediction: { letter: "B", confidence: 0.87 },
+      }),
   });
   await requestTranslation();
   expect(translationBox.value).toBe("B");
 
   expect(fetch).toHaveBeenCalledTimes(2);
 });
-
-

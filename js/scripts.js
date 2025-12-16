@@ -141,7 +141,11 @@ async function submitIncorrectFeedback() {
   const inputValue = document.getElementById("correctLabel").value;
   const correctLabel = inputValue.toUpperCase();
 
-  if (!correctLabel || correctLabel.length !== 1 || !/[A-Z]/.test(correctLabel)) {
+  if (
+    !correctLabel ||
+    correctLabel.length !== 1 ||
+    !/[A-Z]/.test(correctLabel)
+  ) {
     alert("Please enter a single uppercase letter (A-Z)");
     return;
   }
@@ -168,7 +172,9 @@ async function submitFeedback(correctLabel) {
     } else {
       const errorText = await response.text();
       console.error("Feedback submission failed:", response.status, errorText);
-      alert(`Failed to submit feedback (${response.status}). Check console for details.`);
+      alert(
+        `Failed to submit feedback (${response.status}). Check console for details.`,
+      );
     }
   } catch (err) {
     console.error("Error submitting feedback:", err);
@@ -244,6 +250,6 @@ if (typeof module !== "undefined" && module.exports) {
     captureFrame,
     showFeedbackSection,
     submitCorrectFeedback,
-    submitIncorrectFeedback
+    submitIncorrectFeedback,
   };
 }

@@ -138,6 +138,8 @@ REST_FRAMEWORK = {
 
 # Use a temporary directory for media files during tests
 import sys
-if 'pytest' in sys.modules:
+
+if "pytest" in sys.modules:
     import tempfile
+
     MEDIA_ROOT = Path(tempfile.mkdtemp())

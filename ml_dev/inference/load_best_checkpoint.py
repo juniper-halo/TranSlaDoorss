@@ -17,10 +17,10 @@ from pathlib import Path
 def get_best_checkpoint_path(output_dir: str | Path = "ml_dev/saved_weights") -> str:
     """
     Read best_checkpoint.json and return the absolute path to the best model checkpoint.
-    
+
     Args:
         output_dir: Directory containing best_checkpoint.json (can be relative or absolute)
-        
+
     Returns:
         Absolute path to the best checkpoint directory
     """
@@ -35,14 +35,16 @@ def get_best_checkpoint_path(output_dir: str | Path = "ml_dev/saved_weights") ->
     checkpoint = payload.get("best_checkpoint")
     if not checkpoint:
         raise ValueError(f"best_checkpoint not present in {config_path}")
-    
+
     # If checkpoint is relative, resolve it from project root
     checkpoint_path = Path(checkpoint)
     if not checkpoint_path.is_absolute():
         # Assume checkpoint paths in JSON are relative to project root
-        project_root = output_dir.parents[1]  # Go up from ml_dev/saved_weights to project root
+        project_root = output_dir.parents[
+            1
+        ]  # Go up from ml_dev/saved_weights to project root
         checkpoint_path = (project_root / checkpoint).resolve()
-    
+
     return str(checkpoint_path)
 
 
