@@ -123,6 +123,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Media files (user uploaded files)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "feedback_images"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -131,3 +135,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     # You can leave this empty for now or add defaults later
 }
+
+# Use a temporary directory for media files during tests
+import sys
+if 'pytest' in sys.modules:
+    import tempfile
+    MEDIA_ROOT = Path(tempfile.mkdtemp())
