@@ -69,3 +69,35 @@ The frontend uses **Jest** to test DOM interactions and API logic (mocking the w
     ```bash
     npm test
     ```
+
+## Usage
+
+### Running the Server
+1.  **Apply Migrations:**
+    Initialize the database for the Feedback model.
+    ```bash
+    cd django_server
+    python manage.py migrate
+    ```
+
+2.  **Start the Server:**
+    Run the Django development server.
+    ```bash
+    python manage.py runserver
+    ```
+
+3.  **Launch the App:**
+    Open `index.html` in your browser.
+    * *Recommended:* Serve it via a simple HTTP server:
+        ```bash
+        # From the project root
+        python -m http.server 8000
+        ```
+    * Visit `http://localhost:8000`
+
+### Using the App
+1.  Click **"Start Camera"** to enable webcam access.
+2.  Make an ASL sign hand gesture.
+3.  Click **"Translate"** to send the frame to the backend.
+4.  View the prediction and confidence score.
+5.  Use the **Feedback Section** to confirm if the prediction was correct or provide the correct label.
