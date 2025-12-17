@@ -12,7 +12,7 @@ TranSlaDoorss is a web-based accessibility tool designed to bridge communication
 * **Responsive UI**: A user-friendly interface built with Bootstrap and vanilla JavaScript.
 
 ## Tech Stack
-* **Frontend**: HTML5, CSS3, JavaScript (Vanilla), Bootstrap, Jest (Testing)[cite: 25, 44].
+* **Frontend**: HTML5, CSS3, JavaScript (Vanilla), Bootstrap, Jest (Testing).
 * **Backend**: Django 5.2, Django REST Framework, SQLite.
 * **Machine Learning**: PyTorch, Transformers (Hugging Face), CLIP Model, PIL (Pillow).
 * **Dev Tools**: Prettier, ESLint, Black, Pytest.
