@@ -34,7 +34,7 @@ fa25-fa25-team075-transladoorss/
 │   ├── inference/          # Service layer for model predictions
 │   └── development/        # Training and preprocessing scripts
 └── index.html              # Main entry point for the web interface
-
+```
 ## Testing
 
 The project includes automated tests for both the Django backend and the JavaScript frontend.
