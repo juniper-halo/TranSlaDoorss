@@ -34,3 +34,38 @@ fa25-fa25-team075-transladoorss/
 │   ├── inference/          # Service layer for model predictions
 │   └── development/        # Training and preprocessing scripts
 └── index.html              # Main entry point for the web interface
+
+## Testing
+
+The project includes automated tests for both the Django backend and the JavaScript frontend.
+
+### Backend Tests (Python/Django)
+The backend uses **pytest** to verify API endpoints, image processing, and database models.
+
+1.  Navigate to the server directory:
+    ```bash
+    cd django_server
+    ```
+
+2.  Run the full test suite:
+    ```bash
+    pytest
+    ```
+
+**(e.g.):**
+* Run tests with detailed output: `pytest -v`
+* Run a specific test file: `pytest img_in/tests/test_basic.py`
+* Stop on the first failure: `pytest -x`
+
+### Frontend Tests (JavaScript)
+The frontend uses **Jest** to test DOM interactions and API logic (mocking the webcam and fetch calls).
+
+1.  Navigate to the frontend directory:
+    ```bash
+    cd js
+    ```
+
+2.  Run the tests:
+    ```bash
+    npm test
+    ```
