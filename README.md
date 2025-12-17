@@ -3,19 +3,19 @@
 **Team 075**: Benjamin, Juno, Kelly, Evelyn
 
 ## Overview
-[cite_start]TranSlaDoorss is a web-based accessibility tool designed to bridge communication gaps by providing real-time, bidirectional translation between American Sign Language (ASL) and text. The system leverages a fine-tuned CLIP-based machine learning model to interpret hand signs captured via a webcam.
+TranSlaDoorss is a web-based accessibility tool designed to bridge communication gaps by providing real-time, bidirectional translation between American Sign Language (ASL) and text. The system leverages a fine-tuned CLIP-based machine learning model to interpret hand signs captured via a webcam.
 
 ## Features
-* [cite_start]**Real-time ASL Translation**: Captures video frames from the user's webcam and predicts the corresponding ASL letter.
+* **Real-time ASL Translation**: Captures video frames from the user's webcam and predicts the corresponding ASL letter.
 * **Confidence Scoring**: Displays the model's confidence level for each prediction to assist users in gauging accuracy.
 * **Feedback Loop**: Users can validate predictions or provide corrections, which are stored to retrain and improve the model.
-* [cite_start]**Responsive UI**: A user-friendly interface built with Bootstrap and vanilla JavaScript.
+* **Responsive UI**: A user-friendly interface built with Bootstrap and vanilla JavaScript.
 
 ## Tech Stack
-* [cite_start]**Frontend**: HTML5, CSS3, JavaScript (Vanilla), Bootstrap, Jest (Testing)[cite: 25, 44].
-* [cite_start]**Backend**: Django 5.2, Django REST Framework, SQLite.
+* **Frontend**: HTML5, CSS3, JavaScript (Vanilla), Bootstrap, Jest (Testing)[cite: 25, 44].
+* **Backend**: Django 5.2, Django REST Framework, SQLite.
 * **Machine Learning**: PyTorch, Transformers (Hugging Face), CLIP Model, PIL (Pillow).
-* [cite_start]**Dev Tools**: Prettier, ESLint, Black, Pytest.
+* **Dev Tools**: Prettier, ESLint, Black, Pytest.
 
 ## Project Structure
 ```text
