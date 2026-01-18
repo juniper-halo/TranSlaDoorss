@@ -32,3 +32,4 @@ if settings.DEBUG:
     urlpatterns += static("/js/", document_root=settings.FRONTEND_DIR / "js")
     urlpatterns += static("/css/", document_root=settings.FRONTEND_DIR / "css")
     urlpatterns += static("/assets/", document_root=settings.FRONTEND_DIR / "assets")
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

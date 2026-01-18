@@ -1,5 +1,4 @@
 import sys
-import traceback
 from pathlib import Path
 from typing import Any, Dict, List, cast
 
@@ -14,21 +13,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-<<<<<<< HEAD:backend/img_in/views.py
 from ml.inference.service import predict_from_file  # noqa: E402
-=======
-from ml_dev.inference.load_best_checkpoint import \
-    get_best_checkpoint_path  # noqa: E402
-from ml_dev.inference.service import predict_from_file  # noqa: E402
->>>>>>> 0e240047ddb7361def182b40a7754b344084e6c7:django_server/img_in/views.py
-
 from .models import TrainingFeedback
 
 
 class PredictionRequestSerializer(serializers.Serializer):
-    top_k = serializers.IntegerField(
-        required=False, min_value=1, max_value=26, default=1
-    )
+    top_k = serializers.IntegerField(required=False, min_value=1, max_value=26, default=1)
 
 
 class TranslatorView(APIView):
@@ -56,20 +46,7 @@ class TranslatorView(APIView):
             )
 
         try:
-<<<<<<< HEAD:backend/img_in/views.py
             prediction: Dict[str, Any] = predict_from_file(image, top_k=top_k)
-=======
-            try:
-                best_checkpoint = get_best_checkpoint_path(
-                    PROJECT_ROOT / "ml_dev" / "saved_weights"
-                )
-            except Exception as e:
-                print(
-                    f"Could not load best checkpoint path: {e}. Falling back to default model."
-                )
-                best_checkpoint = None
-            prediction = predict_from_file(image, top_k=top_k, model_id=best_checkpoint)
->>>>>>> 0e240047ddb7361def182b40a7754b344084e6c7:django_server/img_in/views.py
         except Exception as exc:
             print("failed to run prediction: ", exc)
             return Response(
@@ -96,7 +73,7 @@ class TranslatorView(APIView):
 
         return Response(payload, status=status.HTTP_200_OK)
 
-    def verify_image(self, image):
+    def verify_image(self, image) -> bool:
         try:
             with Image.open(image) as i:
                 i.verify()
@@ -110,73 +87,49 @@ class FeedbackSerializer(serializers.Serializer):
     predicted_label = serializers.CharField(max_length=1, required=True)
     correct_label = serializers.CharField(max_length=1, required=True)
 
-    def validate_predicted_label(self, value):
-        if not value.isupper() or not value.isalpha():
-            raise serializers.ValidationError(
-                "Predicted label must be a single uppercase letter (A-Z)"
-            )
-        return value
+    def validate_predicted_label(self, value: str) -> str:
+        if not value.isalpha() or len(value) != 1:
+            raise serializers.ValidationError("Predicted label must be a single letter (A-Z)")
+        return value.upper()
 
-    def validate_correct_label(self, value):
-        if not value.isupper() or not value.isalpha():
-            raise serializers.ValidationError(
-                "Correct label must be a single uppercase letter (A-Z)"
-            )
-        return value
+    def validate_correct_label(self, value: str) -> str:
+        if not value.isalpha() or len(value) != 1:
+            raise serializers.ValidationError("Correct label must be a single letter (A-Z)")
+        return value.upper()
 
 
 class FeedbackView(APIView):
     """
-    Accepts user feedback on predictions to improve model training.
+    Accepts user feedback on predictions and stores uploaded frames for future retraining.
     """
 
     def post(self, request: Request):
         image = request.FILES.get("image")
         if image is None:
-            return Response(
-                {"error": "No image found."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "No image found."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate feedback data
         serializer = FeedbackSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        predicted_label = serializer.validated_data["predicted_label"]
-        correct_label = serializer.validated_data["correct_label"]
-
-        # Verify image
         if not self.verify_image(image):
-            return Response(
-                {"error": "Invalid/corrupted image."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "Invalid/corrupted image."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Save feedback to database
-        try:
-            feedback = TrainingFeedback(
-                image=image,
-                predicted_label=predicted_label.upper(),
-                correct_label=correct_label.upper(),
-            )
-            feedback.save()
+        feedback = TrainingFeedback.objects.create(
+            image=image,
+            predicted_label=serializer.validated_data["predicted_label"],
+            correct_label=serializer.validated_data["correct_label"],
+        )
+        return Response(
+            {
+                "message": "Feedback received. Thank you!",
+                "id": feedback.id,
+                "predicted_label": feedback.predicted_label,
+                "correct_label": feedback.correct_label,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
-            return Response(
-                {"message": "Feedback received. Thank you!"},
-                status=status.HTTP_201_CREATED,
-            )
-        except Exception as exc:
-            # Print full traceback to console
-            print("=" * 80)
-            print("ERROR SAVING FEEDBACK:")
-            print(traceback.format_exc())
-            print("=" * 80)
-            return Response(
-                {"error": f"Failed to save feedback: {exc}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-    def verify_image(self, image):
+    def verify_image(self, image) -> bool:
         try:
             with Image.open(image) as i:
                 i.verify()

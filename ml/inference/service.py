@@ -38,12 +38,6 @@ from PIL import Image
 
 from ml.inference.clip_asl_inference import ASLPredictor
 from ml.inference.load_best_checkpoint import resolve_best_checkpoint_model_id
-
-<<<<<<< HEAD:ml/inference/service.py
-
-=======
-DEFAULT_MODEL_ID = os.environ.get("ASL_MODEL_ID", "openai/clip-vit-base-patch32")
->>>>>>> 0e240047ddb7361def182b40a7754b344084e6c7:ml_dev/inference/service.py
 DEFAULT_DEVICE = os.environ.get("ASL_MODEL_DEVICE")
 FALLBACK_MODEL_ID = "openai/clip-vit-base-patch32"
 

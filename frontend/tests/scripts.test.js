@@ -1,12 +1,5 @@
-require("jest-canvas-mock");
-<<<<<<< HEAD:frontend/tests/scripts.test.js
+// Import scripts module (CommonJS export from scripts.js)
 const { toggleCamera, requestTranslation, captureFrame } = require("../js/scripts");
-=======
-
-// Import scripts module
-const scripts = require("./scripts");
-const { toggleCamera, requestTranslation, captureFrame } = scripts;
->>>>>>> 0e240047ddb7361def182b40a7754b344084e6c7:js/scripts.test.js
 
 // Mock the DOM elements before tests - they don't run on the actual webpage
 beforeEach(() => {
