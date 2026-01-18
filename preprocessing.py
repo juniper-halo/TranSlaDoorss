@@ -1,28 +1,42 @@
 """
-asl image preprocessing pipeline (resize/crop to clip-friendly rgb square)
+ASL Image Preprocessing Pipeline
 """
 
-import numpy as np
+from typing import Optional, Tuple
+
 from PIL import Image
 
 
 class ASLPreprocessor:
-    """preprocess asl sign images for clip"""
+    """Preprocessing pipeline for ASL sign language images"""
 
     def __init__(self, target_size: int = 224):
-        """init with target size (default 224 for clip)"""
+        """
+        Initialize the ASL preprocessor
+
+        Args:
+            target_size: Target size for the output image (default: 224x224 for CLIP)
+        """
         self.target_size = target_size
 
     def preprocess(self, image: Image.Image) -> Image.Image:
-        """convert to rgb, center-crop square, resize to target"""
-        # convert to rgb if needed
+        """
+        Preprocess an image for ASL recognition
+
+        Args:
+            image: PIL Image to preprocess
+
+        Returns:
+            Preprocessed PIL Image ready for CLIP inference
+        """
+        # convert to RGB if needed
         if image.mode != "RGB":
             image = image.convert("RGB")
 
-        # center crop to square handle aspect ratio
+        # center crop to square (handle aspect ratio)
         image = self._center_crop_to_square(image)
 
-        # resize to target size with high quality resampling
+        # resize to target size with high-quality resampling
         image = image.resize(
             (self.target_size, self.target_size), Image.Resampling.LANCZOS
         )
@@ -30,10 +44,18 @@ class ASLPreprocessor:
         return image
 
     def _center_crop_to_square(self, image: Image.Image) -> Image.Image:
-        """center crop to square aspect ratio"""
+        """
+        Center crop image to square aspect ratio
+
+        Args:
+            image: PIL Image to crop
+
+        Returns:
+            Center-cropped square PIL Image
+        """
         width, height = image.size
 
-        # if already square return as is
+        # if already square, return as-is
         if width == height:
             return image
 
@@ -87,8 +109,10 @@ class ASLPreprocessor:
 
 
 # test the preprocessor
-# test the preprocessor
 if __name__ == "__main__":
+
+    import numpy as np
+    from PIL import Image
 
     print("Testing ASL Preprocessor...")
 
@@ -99,8 +123,8 @@ if __name__ == "__main__":
 
     preprocessor = ASLPreprocessor(target_size=224)
 
-    result_image = preprocessor.preprocess(test_image)
-    print(f"Processed image: {result_image.size}, mode: {result_image.mode}")
+    processed_image = preprocessor.preprocess(test_image)
+    print(f"Processed image: {processed_image.size}, mode: {processed_image.mode}")
 
     info = preprocessor.get_preprocessing_info(test_image)
     print(f"Preprocessing info: {info}")

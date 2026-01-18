@@ -21,7 +21,8 @@ import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset, random_split
 from torch.utils.tensorboard import SummaryWriter
-from transformers import CLIPModel, CLIPProcessor, get_linear_schedule_with_warmup
+from transformers import (CLIPModel, CLIPProcessor,
+                          get_linear_schedule_with_warmup)
 
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
@@ -105,10 +106,38 @@ class ASLFineTuner:
 
         self.preprocessor = ASLPreprocessor()
         self.letters = [chr(65 + i) for i in range(26)]
-        self.text_prompts = [f"a photo of a hand showing the sign language letter {letter}" for letter in self.letters]
-        text_inputs = self.processor(text=self.text_prompts, return_tensors="pt", padding=True)
-        self.text_inputs = {k: v.to(training_cfg.device) for k, v in text_inputs.items()}
+        self.text_prompts = [
+            f"a photo of a hand showing the sign language letter {letter}"
+            for letter in self.letters
+        ]
+        text_inputs = self.processor(
+            text=self.text_prompts, return_tensors="pt", padding=True
+        )
+        self.text_inputs = {
+            k: v.to(training_cfg.device) for k, v in text_inputs.items()
+        }
         self.loss_fn = nn.CrossEntropyLoss()
+
+        # Prepare textual prompts and precompute text features (kept fixed here?)
+        self.letters = [chr(65 + i) for i in range(26)]
+        self.text_prompts = [
+            f"a photo of a hand showing the sign language letter {letter}"
+            for letter in self.letters
+        ]
+
+        # tokenize and compute text features
+        tokenized = self.processor(
+            text=self.text_prompts, return_tensors="pt", padding=True
+        )
+        tokenized = {k: v.to(training_cfg.device) for k, v in tokenized.items()}
+        with torch.no_grad():
+            text_feats = self.model.get_text_features(**tokenized)
+            text_feats = text_feats / text_feats.norm(dim=-1, keepdim=True)
+        self.register_buffer = None  # placeholder
+        self.text_features = text_feats
+
+        # loss
+        self.criterion = nn.CrossEntropyLoss()
 
         hf_dataset = load_dataset(dataset_cfg.name)
         train_split = hf_dataset[dataset_cfg.train_split]
@@ -128,7 +157,11 @@ class ASLFineTuner:
         self.scheduler = self._create_scheduler()
 
         # logging
-        log_dir = Path(training_cfg.log_dir) if training_cfg.log_dir else Path(training_cfg.output_dir) / "logs"
+        log_dir = (
+            Path(training_cfg.log_dir)
+            if training_cfg.log_dir
+            else Path(training_cfg.output_dir) / "logs"
+        )
         log_dir.mkdir(parents=True, exist_ok=True)
         self.writer = SummaryWriter(log_dir) if training_cfg.log_tensorboard else None
         if self.writer:
@@ -148,9 +181,14 @@ class ASLFineTuner:
         )
 
     def _create_scheduler(self):
-        steps_per_epoch = math.ceil(len(self.train_dataset) / self.training_cfg.batch_size)
+        steps_per_epoch = math.ceil(
+            len(self.train_dataset) / self.training_cfg.batch_size
+        )
         total_steps = max(
-            1, steps_per_epoch * self.training_cfg.epochs // self.training_cfg.gradient_accumulation_steps
+            1,
+            steps_per_epoch
+            * self.training_cfg.epochs
+            // self.training_cfg.gradient_accumulation_steps,
         )
         return get_linear_schedule_with_warmup(
             optimizer=self.optimizer,
@@ -191,6 +229,9 @@ class ASLFineTuner:
                 loss = raw_loss / self.training_cfg.gradient_accumulation_steps
                 loss.backward()
 
+                epoch_loss += loss.item()
+                epoch_steps += 1
+
                 if (step + 1) % self.training_cfg.gradient_accumulation_steps == 0:
                     self.optimizer.step()
                     self.scheduler.step()
@@ -205,16 +246,32 @@ class ASLFineTuner:
                     if global_step % self.training_cfg.log_every_n_steps == 0:
                         avg_loss = running_loss / max(1, running_total)
                         acc = running_correct / max(1, running_total)
-                        log.info("Epoch %s step %s | loss %.4f | acc %.3f", epoch, global_step, avg_loss, acc)
+                        log.info(
+                            "Epoch %s step %s | loss %.4f | acc %.3f",
+                            epoch,
+                            global_step,
+                            avg_loss,
+                            acc,
+                        )
                         if self.writer:
                             self.writer.add_scalar("train/loss", avg_loss, global_step)
                             self.writer.add_scalar("train/accuracy", acc, global_step)
+
+                        avg_loss = epoch_loss / max(1, epoch_steps)
+                        log.info(
+                            "Epoch %s step %s loss %.4f", epoch, global_step, avg_loss
+                        )
+
+            avg_epoch_loss = epoch_loss / max(1, epoch_steps)
+            log.info("Finished epoch %s - avg loss: %.4f", epoch, avg_epoch_loss)
 
             if val_loader:
                 eval_metrics = self.evaluate(val_loader, epoch)
                 if self.writer:
                     self.writer.add_scalar("val/loss", eval_metrics["loss"], epoch)
-                    self.writer.add_scalar("val/accuracy", eval_metrics["accuracy"], epoch)
+                    self.writer.add_scalar(
+                        "val/accuracy", eval_metrics["accuracy"], epoch
+                    )
                 self._write_metrics(eval_metrics, epoch)
 
             self.save_checkpoint(epoch)
@@ -245,15 +302,24 @@ class ASLFineTuner:
         accuracy = total_correct / max(1, total_samples)
         per_class_total = confusion.sum(dim=1)
         per_class_correct = confusion.diag()
-        per_class_accuracy = torch.where(per_class_total > 0, per_class_correct.float() / per_class_total.float(), torch.zeros_like(per_class_total, dtype=torch.float))
+        per_class_accuracy = torch.where(
+            per_class_total > 0,
+            per_class_correct.float() / per_class_total.float(),
+            torch.zeros_like(per_class_total, dtype=torch.float),
+        )
 
         metrics = {
             "loss": avg_loss,
             "accuracy": accuracy,
-            "per_class_accuracy": {letter: per_class_accuracy[idx].item() for idx, letter in enumerate(self.letters)},
+            "per_class_accuracy": {
+                letter: per_class_accuracy[idx].item()
+                for idx, letter in enumerate(self.letters)
+            },
         }
 
-        log.info("Validation epoch %s | loss %.4f | accuracy %.3f", epoch, avg_loss, accuracy)
+        log.info(
+            "Validation epoch %s | loss %.4f | accuracy %.3f", epoch, avg_loss, accuracy
+        )
         log.debug("Per-class accuracy: %s", metrics["per_class_accuracy"])
         self.model.train()
         return metrics
@@ -338,7 +404,9 @@ def main() -> None:
     dataset_cfg, training_cfg = load_configs(args.config, args.output_dir)
     trainer = ASLFineTuner(dataset_cfg, training_cfg)
     trainer.train()
-    log.info("training complete; run export_best_checkpoint.py to pick a best checkpoint based on metrics")
+    log.info(
+        "training complete; run export_best_checkpoint.py to pick a best checkpoint based on metrics"
+    )
 
 
 if __name__ == "__main__":

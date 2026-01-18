@@ -9,6 +9,7 @@ run (from repo root):
 - set ASL_MODEL_ID to a fine-tuned checkpoint (e.g. ml/saved_weights/epoch_7) or pass --model-id
 - python -m ml.inference.clip_asl_inference --model-id ml/saved_weights/epoch_7 --image path/to/image.jpg --top-k 3
 """
+
 import os
 import sys
 from pathlib import Path
@@ -61,7 +62,26 @@ class ASLPredictor(BaseASLModel):
 
         print(f"Loading CLIP model on {self.device}...")
         self.model = CLIPModel.from_pretrained(model_name)
-        self.model.to(self.device)
+
+        # Try to move model to device, fall back to CPU if CUDA kernel error occurs
+        try:
+            self.model.to(self.device)
+            # Test if CUDA actually works by doing a small operation
+            if self.device.type == "cuda":
+                test_tensor = torch.zeros(1, device=self.device)
+                _ = test_tensor + 1  # Simple operation to trigger kernel execution
+                print(f"CUDA compatibility check passed on {self.device}")
+        except RuntimeError as e:
+            if "CUDA error" in str(e) and "no kernel image is available" in str(e):
+                print(
+                    f"Warning: CUDA kernel not compatible with device. Falling back to CPU."
+                )
+                print(f"Error details: {e}")
+                self.device = torch.device("cpu")
+                self.model.to(self.device)
+            else:
+                raise
+
         self.processor = CLIPProcessor.from_pretrained(model_name)
 
         # set up letters and text prompts
@@ -72,15 +92,17 @@ class ASLPredictor(BaseASLModel):
         ]
 
         # prepare text inputs once for reuse
-        text_inputs = self.processor(text=self.text_prompts, return_tensors="pt", padding=True)
+        text_inputs = self.processor(
+            text=self.text_prompts, return_tensors="pt", padding=True
+        )
         self.text_inputs = {k: v.to(self.device) for k, v in text_inputs.items()}
 
         # initialize preprocessor
         self.preprocessor = ASLPreprocessor()
 
-
-        print(f"ASL Predictor initialized with {len(self.letters)} letters")
-
+        print(
+            f"ASL Predictor initialized with {len(self.letters)} letters on {self.device}"
+        )
 
     def predict(self, image: Image.Image) -> Tuple[str, float]:
         """
@@ -134,6 +156,7 @@ class ASLPredictor(BaseASLModel):
 
         pred_idx = probs.argmax().item()
         confidence = probs.max().item()
+        confidence = probs.max().item()
         predicted_letter = self.letters[pred_idx]
 
         return predicted_letter, confidence, probs
@@ -168,22 +191,22 @@ class ASLPredictor(BaseASLModel):
             Tuple of (predicted_letter, confidence_score, true_letter)
         """
         # load dataset cached after first load
-        if not hasattr(self, 'dataset'):
+        if not hasattr(self, "dataset"):
             print("Loading ASL dataset...")
             self.dataset = load_dataset("aliciiavs/sign_language_image_dataset")
             print(f"Dataset loaded with {len(self.dataset[split])} samples")
-        
+
         # get image and true label
         sample = self.dataset[split][index]
-        image = sample['image']
-        true_label = sample['label']
+        image = sample["image"]
+        true_label = sample["label"]
         true_letter = self.letters[true_label]
-        
+
         # predict
         predicted_letter, confidence = self.predict(image)
-        
+
         return predicted_letter, confidence, true_letter
-    
+
     def get_top_predictions(self, image: Image.Image, top_k: int = 3) -> list:
         """
         Get top-k predictions with confidence scores
@@ -197,7 +220,7 @@ class ASLPredictor(BaseASLModel):
         """
         # preprocess the image
         processed_image = self.preprocessor.preprocess(image)
-        
+
         inputs = self.processor(
             images=processed_image,
             return_tensors="pt",
@@ -223,6 +246,7 @@ class ASLPredictor(BaseASLModel):
 # example usage and testing
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="run a quick ASL prediction")
     parser.add_argument(
         "--model-id",
@@ -230,7 +254,9 @@ if __name__ == "__main__":
         help="hf repo id or local checkpoint; defaults to ASL_MODEL_ID, then best_checkpoint.json, then base clip",
     )
     parser.add_argument("--image", required=True, help="path to image file")
-    parser.add_argument("--top-k", type=int, default=3, help="number of top predictions to print")
+    parser.add_argument(
+        "--top-k", type=int, default=3, help="number of top predictions to print"
+    )
     args = parser.parse_args()
 
     predictor = ASLPredictor(model_name=args.model_id)

@@ -6,6 +6,8 @@ ml_dev/__pycache__/
 ml_dev/development/__pycache__/
 ml_dev/inference/__pycache__/
 ml_dev/testing/__pycache__/
+ml_dev/__MACOSX/
+ml_dev/saved_weights/
 # Node.js dependencies
 node_modules/
 npm-debug.log*

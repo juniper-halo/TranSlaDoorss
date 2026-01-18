@@ -10,6 +10,10 @@
 // Webcam stream reference
 let webcamStream = null;
 
+// Store last captured frame and prediction for feedback
+let lastCapturedBlob = null;
+let lastPrediction = null;
+
 // Toggle the webcam on/off
 async function toggleCamera() {
   const video = document.getElementById("webcam");
@@ -46,6 +50,10 @@ async function requestTranslation() {
   }
 
   const frameBlob = await captureFrame();
+
+  // Store the captured frame for feedback
+  lastCapturedBlob = frameBlob;
+
   const formData = new FormData();
   formData.append("image", frameBlob, "frame.png");
   formData.append("language", "ASL");
@@ -54,9 +62,22 @@ async function requestTranslation() {
     body: formData,
   });
   const result = await response.json();
-  console.log("Translation result:", result);
+
+  // Store prediction for feedback
+  lastPrediction = result.prediction;
+
   const translationBox = document.getElementById("translationResult");
-  translationBox.value = result.translation;
+  const showConfidence = document.getElementById("showConfidence").checked;
+
+  if (showConfidence) {
+    const confidencePercent = (result.prediction.confidence * 100).toFixed(1);
+    translationBox.value = `${result.prediction.letter} (${confidencePercent}% confidence)`;
+  } else {
+    translationBox.value = result.prediction.letter;
+  }
+
+  // Show feedback section with captured image
+  showFeedbackSection();
 }
 
 // Capture a frame from the webcam video
@@ -79,6 +100,103 @@ async function captureFrame() {
   });
 
   return blob;
+}
+
+// Show feedback section with captured image
+function showFeedbackSection() {
+  const feedbackSection = document.getElementById("feedbackSection");
+  const capturedImage = document.getElementById("capturedImage");
+  const correctBtn = document.getElementById("correctBtn");
+  const incorrectBtn = document.getElementById("incorrectBtn");
+  const correctLabel = document.getElementById("correctLabel");
+
+  if (!lastCapturedBlob) {
+    console.error("No captured image available for feedback");
+    return;
+  }
+
+  try {
+    // Convert blob to data URL for display
+    const imageUrl = URL.createObjectURL(lastCapturedBlob);
+    capturedImage.src = imageUrl;
+
+    // Show section and enable buttons
+    feedbackSection.style.display = "block";
+    correctBtn.disabled = false;
+    incorrectBtn.disabled = false;
+    correctLabel.disabled = false;
+    correctLabel.value = "";
+  } catch (error) {
+    console.error("Error showing feedback section:", error);
+  }
+}
+
+// Submit feedback indicating prediction was correct
+async function submitCorrectFeedback() {
+  await submitFeedback(lastPrediction.letter);
+}
+
+// Submit feedback with user-provided correct label
+async function submitIncorrectFeedback() {
+  const inputValue = document.getElementById("correctLabel").value;
+  const correctLabel = inputValue.toUpperCase();
+
+  if (
+    !correctLabel ||
+    correctLabel.length !== 1 ||
+    !/[A-Z]/.test(correctLabel)
+  ) {
+    alert("Please enter a single uppercase letter (A-Z)");
+    return;
+  }
+
+  await submitFeedback(correctLabel);
+}
+
+// Send feedback to backend
+async function submitFeedback(correctLabel) {
+  const formData = new FormData();
+  formData.append("image", lastCapturedBlob, "feedback.png");
+  formData.append("predicted_label", lastPrediction.letter);
+  formData.append("correct_label", correctLabel);
+
+  try {
+    const response = await fetch("/img_in/feedback/", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.ok) {
+      alert("Thank you for your feedback!");
+      resetFeedbackSection();
+    } else {
+      const errorText = await response.text();
+      console.error("Feedback submission failed:", response.status, errorText);
+      alert(
+        `Failed to submit feedback (${response.status}). Check console for details.`,
+      );
+    }
+  } catch (err) {
+    console.error("Error submitting feedback:", err);
+    alert("Failed to submit feedback. Please try again.");
+  }
+}
+
+// Reset feedback section after submission
+function resetFeedbackSection() {
+  const feedbackSection = document.getElementById("feedbackSection");
+  const correctBtn = document.getElementById("correctBtn");
+  const incorrectBtn = document.getElementById("incorrectBtn");
+  const correctLabel = document.getElementById("correctLabel");
+
+  feedbackSection.style.display = "none";
+  correctBtn.disabled = true;
+  incorrectBtn.disabled = true;
+  correctLabel.disabled = true;
+  correctLabel.value = "";
+
+  lastCapturedBlob = null;
+  lastPrediction = null;
 }
 
 window.addEventListener("DOMContentLoaded", (event) => {
@@ -126,5 +244,12 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
 // Export functions for testing (ignored by browsers)
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { toggleCamera, requestTranslation, captureFrame };
+  module.exports = {
+    toggleCamera,
+    requestTranslation,
+    captureFrame,
+    showFeedbackSection,
+    submitCorrectFeedback,
+    submitIncorrectFeedback,
+  };
 }

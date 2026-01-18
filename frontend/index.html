@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="description" content="" />
     <meta name="author" content="" />
-    <title>Grayscale - Start Bootstrap Theme</title>
+    <title>Transladoorss Project</title>
     <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
     <!-- Font Awesome icons (free version)-->
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
@@ -71,60 +71,103 @@
                         Camera</button>
                     <button id="translateBtn" class="btn btn-primary mt-3"
                         onclick="requestTranslation()">Translate</button>
+                    <div class="form-check mt-3 text-white-50 text-start">
+                        <input class="form-check-input" type="checkbox" id="showConfidence">
+                        <label class="form-check-label" for="showConfidence">
+                            Show confidence
+                        </label>
+                    </div>
                     <textarea id="translationResult" class="form-control mt-3" rows="3" readonly
-                        placeholder="Translation will appear here..."></textarea>
+                        placeholder="Translation will appear here..." style="font-size: 1.5rem;"></textarea>
+
+                    <!-- Feedback Section -->
+                    <div id="feedbackSection" class="mt-4" style="display: none;">
+                        <h5 class="text-white mb-3">Help Improve the Model</h5>
+                        <img id="capturedImage" src="" alt="Captured frame"
+                            style="max-width: 300px; border: 2px solid #64a19d; border-radius: 8px;" class="mb-3">
+                        <div class="d-flex flex-column align-items-center gap-2">
+                            <button id="correctBtn" class="btn btn-success" onclick="submitCorrectFeedback()" disabled>
+                                ✓ That's correct!
+                            </button>
+                            <div class="d-flex gap-2 align-items-center">
+                                <button id="incorrectBtn" class="btn btn-warning" onclick="submitIncorrectFeedback()"
+                                    disabled>
+                                    ✗ That's not right
+                                </button>
+                                <input type="text" id="correctLabel" class="form-control" placeholder="e.g. A"
+                                    maxlength="1" style="width: 150px; text-transform: uppercase;" disabled>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <img class="img-fluid" src="assets/img/ipad.png" alt="..." />
+            <img class="img-fluid" src="assets/img/handimage1.png" alt="..." />
         </div>
     </section>
     <!-- Projects-->
     <section class="projects-section bg-light" id="projects">
-        <div class="container px-4 px-lg-5">
-            <!-- Featured Project Row-->
-            <div class="row gx-0 mb-4 mb-lg-5 align-items-center">
-                <div class="col-xl-8 col-lg-7"><img class="img-fluid mb-3 mb-lg-0" src="assets/img/bg-masthead.jpg"
-                        alt="..." /></div>
-                <div class="col-xl-4 col-lg-5">
-                    <div class="featured-text text-center text-lg-left">
-                        <h4>Shoreline</h4>
-                        <p class="text-black-50 mb-0">Grayscale is open source and MIT licensed. This means you can use
-                            it for any project - even commercial projects! Download it, customize it, and publish your
-                            website!</p>
-                    </div>
-                </div>
+      <div class="container px-4 px-lg-5">
+
+    <!-- Featured Project Row -->
+        <div class="row gx-0 mb-4 mb-lg-5 align-items-center">
+          <div class="col-xl-8 col-lg-7">
+            <img class="img-fluid mb-3 mb-lg-0" src="assets/img/handimage4.jpg" alt="TranSlaDoorss demo background" />
+          </div>
+          <div class="col-xl-4 col-lg-5">
+            <div class="featured-text text-center text-lg-left">
+              <h4>What TranSlaDoorss Does</h4>
+              <p class="text-black-50 mb-0">
+                TranSlaDoorss is a real-time accessibility tool that helps bridge communication gaps by translating
+                between sign language, text, and speech—supporting more inclusive conversations in classrooms, public
+                services, and everyday interactions.
+              </p>
             </div>
-            <!-- Project One Row-->
-            <div class="row gx-0 mb-5 mb-lg-0 justify-content-center">
-                <div class="col-lg-6"><img class="img-fluid" src="assets/img/demo-image-01.jpg" alt="..." /></div>
-                <div class="col-lg-6">
-                    <div class="bg-black text-center h-100 project">
-                        <div class="d-flex h-100">
-                            <div class="project-text w-100 my-auto text-center text-lg-left">
-                                <h4 class="text-white">Misty</h4>
-                                <p class="mb-0 text-white-50">An example of where you can put an image of a project, or
-                                    anything else, along with a description.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Project Two Row-->
-            <div class="row gx-0 justify-content-center">
-                <div class="col-lg-6"><img class="img-fluid" src="assets/img/demo-image-02.jpg" alt="..." /></div>
-                <div class="col-lg-6 order-lg-first">
-                    <div class="bg-black text-center h-100 project">
-                        <div class="d-flex h-100">
-                            <div class="project-text w-100 my-auto text-center text-lg-right">
-                                <h4 class="text-white">Mountains</h4>
-                                <p class="mb-0 text-white-50">Another example of a project with its respective
-                                    description. These sections work well responsively as well!</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
+
+        <!-- Project One Row -->
+        <div class="row gx-0 mb-5 mb-lg-0 justify-content-center">
+          <div class="col-lg-6">
+            <img class="img-fluid" src="assets/img/handimage3.jpg" alt="Webcam sign capture" />
+          </div>
+          <div class="col-lg-6">
+            <div class="bg-black text-center h-100 project">
+              <div class="d-flex h-100">
+                <div class="project-text w-100 my-auto text-center text-lg-left">
+                  <h4 class="text-white">Sign → Text (Webcam)</h4>
+                  <p class="mb-0 text-white-50">
+                    Using a webcam stream, the system captures hand/gesture frames and predicts the intended sign.
+                    The predicted label is displayed instantly, and you can optionally show confidence to understand
+                    model certainty.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project Two Row -->
+        <div class="row gx-0 justify-content-center">
+          <div class="col-lg-6">
+            <img class="img-fluid" src="assets/img/handimage2.jpg" alt="Feedback and correction" />
+          </div>
+          <div class="col-lg-6 order-lg-first">
+            <div class="bg-black text-center h-100 project">
+              <div class="d-flex h-100">
+                <div class="project-text w-100 my-auto text-center text-lg-right">
+                  <h4 class="text-white">Human Feedback Loop</h4>
+                  <p class="mb-0 text-white-50">
+                    After each prediction, users can mark results as correct or provide the right label.
+                    This creates a lightweight feedback dataset that can be used to improve model performance
+                    and reduce bias over time.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    
+      </div>
     </section>
     <!-- Signup-->
     <section class="signup-section" id="signup">
@@ -132,7 +175,7 @@
             <div class="row gx-4 gx-lg-5">
                 <div class="col-md-10 col-lg-8 mx-auto text-center">
                     <i class="far fa-paper-plane fa-2x mb-2 text-white"></i>
-                    <h2 class="text-white mb-5">Subscribe to receive updates!</h2>
+                    <h2 class="text-white mb-5">Get updates or collaborate with us</h2>
                     <!-- * * * * * * * * * * * * * * *-->
                     <!-- * * SB Forms Contact Form * *-->
                     <!-- * * * * * * * * * * * * * * *-->
@@ -144,10 +187,10 @@
                         <!-- Email address input-->
                         <div class="row input-group-newsletter">
                             <div class="col"><input class="form-control" id="emailAddress" type="email"
-                                    placeholder="Enter email address..." aria-label="Enter email address..."
+                                    placeholder="Enter your email to hear from the our updates.." aria-label="Enter email address..."
                                     data-sb-validations="required,email" /></div>
                             <div class="col-auto"><button class="btn btn-primary disabled" id="submitButton"
-                                    type="submit">Notify Me!</button></div>
+                                    type="submit">Contact Us</button></div>
                         </div>
                         <div class="invalid-feedback mt-2" data-sb-feedback="emailAddress:required">An email is
                             required.</div>
@@ -198,7 +241,7 @@
                             <i class="fas fa-envelope text-primary mb-2"></i>
                             <h4 class="text-uppercase m-0">Email</h4>
                             <hr class="my-4 mx-auto" />
-                            <div class="small text-black-50"><a href="#!">hello@yourdomain.com</a></div>
+                            <div class="small text-black-50"><a href="#!">madhavt2@illinois.edu</a></div>
                         </div>
                     </div>
                 </div>
@@ -208,7 +251,7 @@
                             <i class="fas fa-mobile-alt text-primary mb-2"></i>
                             <h4 class="text-uppercase m-0">Phone</h4>
                             <hr class="my-4 mx-auto" />
-                            <div class="small text-black-50">+1 (555) 902-8832</div>
+                            <div class="small text-black-50">+1 (217) 021-4488</div>
                         </div>
                     </div>
                 </div>
@@ -222,7 +265,7 @@
     </section>
     <!-- Footer-->
     <footer class="footer bg-black small text-center text-white-50">
-        <div class="container px-4 px-lg-5">Copyright &copy; Your Website 2023</div>
+        <div class="container px-4 px-lg-5">Copyright &copy; Transladoorss Team 075 2025</div>
     </footer>
     <!-- Bootstrap core JS-->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>

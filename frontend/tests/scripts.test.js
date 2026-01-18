@@ -1,18 +1,40 @@
 require("jest-canvas-mock");
+<<<<<<< HEAD:frontend/tests/scripts.test.js
 const { toggleCamera, requestTranslation, captureFrame } = require("../js/scripts");
+=======
+
+// Import scripts module
+const scripts = require("./scripts");
+const { toggleCamera, requestTranslation, captureFrame } = scripts;
+>>>>>>> 0e240047ddb7361def182b40a7754b344084e6c7:js/scripts.test.js
 
 // Mock the DOM elements before tests - they don't run on the actual webpage
 beforeEach(() => {
   document.body.innerHTML = `
     <video id="webcam"></video>
     <button id="startCameraBtn">Start Camera</button>
+    <input type="checkbox" id="showConfidence" />
     <textarea id="translationResult" readonly></textarea>
+    <div id="feedbackSection" style="display: none;">
+      <img id="capturedImage" src="" alt="Captured frame" />
+      <button id="correctBtn" disabled>That's correct!</button>
+      <button id="incorrectBtn" disabled>That's not right</button>
+      <input type="text" id="correctLabel" disabled />
+    </div>
   `;
 
   // Mock navigator.mediaDevices
   if (!navigator.mediaDevices) {
     navigator.mediaDevices = {};
   }
+
+  // Mock video dimensions for captureFrame
+  const video = document.getElementById("webcam");
+  Object.defineProperty(video, "videoWidth", { value: 640, writable: true });
+  Object.defineProperty(video, "videoHeight", { value: 480, writable: true });
+
+  // Mock URL.createObjectURL
+  global.URL.createObjectURL = jest.fn(() => "blob:mock-url");
 });
 
 test("toggleCamera starts and stops the webcam", async () => {
@@ -99,9 +121,12 @@ test("requestTranslation send frame and update translation result", async () => 
   const dummyBlob = new Blob(["dummy image data"], { type: "image/png" });
   window.captureFrame = jest.fn().mockResolvedValue(dummyBlob);
 
-  // Mock fetch - return a fake successful response
+  // Mock fetch - return a fake successful response with new prediction format
   global.fetch = jest.fn().mockResolvedValue({
-    json: () => Promise.resolve({ translation: "a" }),
+    json: () =>
+      Promise.resolve({
+        prediction: { letter: "A", confidence: 0.95 },
+      }),
   });
 
   // Call the function
@@ -121,14 +146,17 @@ test("requestTranslation send frame and update translation result", async () => 
   expect(formData.get("image").name).toBe("frame.png");
 
   // Verify translation result is updated
-  expect(translationBox.value).toBe("a");
+  expect(translationBox.value).toBe("A");
 
   // Try again with a different translation
   fetch.mockResolvedValueOnce({
-    json: () => Promise.resolve({ translation: "b" }),
+    json: () =>
+      Promise.resolve({
+        prediction: { letter: "B", confidence: 0.87 },
+      }),
   });
   await requestTranslation();
-  expect(translationBox.value).toBe("b");
+  expect(translationBox.value).toBe("B");
 
   expect(fetch).toHaveBeenCalledTimes(2);
 });
